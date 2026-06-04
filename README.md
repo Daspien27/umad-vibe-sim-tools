@@ -4,7 +4,7 @@ A completely local, static browser trainer for the FFXIV ultimate **UMAD** Phase
 **Arrows** mechanic. Deals you one player's two arrows and times how fast you can click
 your two perimeter spots — in the correct drop order.
 
-**[▶ Play it](https://USERNAME.github.io/REPO/)** *(update this link after enabling GitHub Pages)*
+**[▶ Play it](https://daspien27.github.io/umad-vibe-sim-tools/)** *(live once GitHub Pages is enabled — see Settings → Pages)*
 
 ## The mechanic
 
