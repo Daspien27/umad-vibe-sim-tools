@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UMAD P1 Arrows — Reaction Trainer</title>
+<style>
+  :root {
+    --bg: #07070e;
+    --panel: #11121d;
+    --edge: #2a2c42;
+    --cyan: #38c6ff;
+    --pink: #ff5fcb;
+    --gold: #f5a623;
+    --green: #36e07f;
+    --red: #ff4d5e;
+    --text: #e8eaf6;
+    --muted: #8a8da8;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: radial-gradient(circle at 50% 38%, #16172a 0%, var(--bg) 70%);
+    color: var(--text);
+    font-family: "Segoe UI", system-ui, sans-serif;
+    -webkit-user-select: none; user-select: none;
+  }
+  body {
+    display: flex; flex-direction: column; align-items: center;
+    min-height: 100%; padding: 16px 12px 40px;
+  }
+  h1 {
+    font-size: 1.25rem; letter-spacing: 0.14em; margin: 4px 0 2px;
+    text-transform: uppercase; color: #fff; font-weight: 800;
+  }
+  .sub { color: var(--muted); font-size: 0.78rem; letter-spacing: 0.06em; margin-bottom: 12px; }
+
+  /* ---- strat tabs ---- */
+  .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+  .tab {
+    font: inherit; font-weight: 700; font-size: 0.82rem; letter-spacing: 0.06em;
+    color: var(--muted); background: var(--panel); border: 1px solid var(--edge);
+    border-radius: 999px; padding: 8px 18px; cursor: pointer;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: #06070d; background: var(--cyan); border-color: var(--cyan); }
+
+  /* ---- assignment ---- */
+  #assign {
+    display: flex; gap: 18px; align-items: center; justify-content: center;
+    min-height: 96px; margin-bottom: 10px;
+  }
+  .arrowTile {
+    width: 86px; height: 86px; border-radius: 14px;
+    background: var(--panel); border: 2px solid var(--edge);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .arrowTile .glyph { font-size: 2.6rem; line-height: 1; }
+  .arrowTile .timer {
+    position: absolute; top: -11px; right: -11px;
+    font-size: 0.72rem; font-weight: 800; letter-spacing: 0.02em;
+    padding: 3px 8px; border-radius: 999px; color: #06070d;
+  }
+  .timer.t7  { background: var(--gold);  box-shadow: 0 0 14px rgba(245,166,35,.55); }
+  .timer.t10 { background: var(--cyan);  box-shadow: 0 0 14px rgba(56,198,255,.45); }
+  .roleTag {
+    font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 3px 12px; border-radius: 999px; align-self: center;
+  }
+  .roleTag.match { color: var(--cyan); border: 1px solid var(--cyan); }
+  .roleTag.mixed { color: var(--pink); border: 1px solid var(--pink); }
+
+  /* ---- board ---- */
+  #board {
+    display: grid;
+    grid-template-columns: repeat(5, 64px);
+    grid-template-rows: repeat(5, 64px);
+    gap: 7px; margin: 6px 0 14px;
+  }
+  .cell {
+    border-radius: 10px; background: #0d0e18;
+    border: 2px solid var(--edge);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.7rem; color: var(--muted);
+    cursor: pointer; position: relative;
+    transition: transform .06s, border-color .12s, background .12s, box-shadow .12s;
+  }
+  .cell:hover { border-color: #4a4d70; background: #141624; }
+  .cell.sel { border-color: #fff; color: #fff; box-shadow: 0 0 16px rgba(255,255,255,.35); transform: scale(1.04); }
+  .cell .order {
+    position: absolute; top: -9px; left: -9px;
+    width: 22px; height: 22px; border-radius: 50%;
+    font-size: 0.78rem; font-weight: 800; color: #06070d;
+    display: flex; align-items: center; justify-content: center;
+    background: #fff;
+  }
+  .cell.ok    { border-color: var(--green); color: var(--green); box-shadow: 0 0 18px rgba(54,224,127,.5); }
+  .cell.bad   { border-color: var(--red);   color: var(--red);   box-shadow: 0 0 18px rgba(255,77,94,.5); }
+  .cell.solution { border-color: var(--green); }
+  .cell.solution .order { background: var(--green); }
+  .center-label {
+    display: flex; align-items: center; justify-content: center;
+    text-align: center; color: var(--muted);
+    font-size: 0.74rem; letter-spacing: 0.18em; line-height: 1.7;
+    text-transform: uppercase; pointer-events: none;
+  }
+
+  /* ---- result / controls ---- */
+  #result { min-height: 30px; font-size: 1.05rem; font-weight: 700; letter-spacing: 0.02em; }
+  #result.ok  { color: var(--green); }
+  #result.bad { color: var(--red); }
+  #time { color: var(--muted); font-size: 0.85rem; margin-left: 8px; font-weight: 500; }
+  .controls { display: flex; gap: 10px; margin-top: 12px; align-items: center; }
+  button {
+    font: inherit; font-weight: 700; letter-spacing: 0.04em;
+    color: #06070d; background: var(--cyan);
+    border: none; border-radius: 10px; padding: 10px 22px; cursor: pointer;
+  }
+  button:hover { filter: brightness(1.08); }
+  button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--edge); }
+  button.ghost:hover { color: var(--text); border-color: #4a4d70; }
+
+  /* ---- legend ---- */
+  #legend {
+    margin-top: 18px; background: var(--panel); border: 1px solid var(--edge);
+    border-radius: 12px; padding: 14px 18px; max-width: 560px; font-size: 0.82rem;
+  }
+  #legend[hidden] { display: none; }
+  #legend h3 { margin: 0 0 8px; font-size: 0.8rem; letter-spacing: 0.1em; color: var(--cyan); text-transform: uppercase; }
+  #legend table { border-collapse: collapse; width: 100%; }
+  #legend td { padding: 3px 8px; border-bottom: 1px solid #1c1e2e; color: var(--muted); }
+  #legend td.k { color: var(--text); font-size: 1.05rem; }
+  #legend .hint { margin-top: 10px; color: var(--muted); line-height: 1.5; }
+  .pink { color: var(--pink); } .cyan { color: var(--cyan); }
+</style>
+</head>
+<body>
+  <h1>UMAD · P1 Arrows</h1>
+  <div class="sub">Everyone orients clockwise · drop the 7s puddle first</div>
+
+  <div class="tabs" id="tabs"></div>
+
+  <div id="assign"></div>
+
+  <div id="board"></div>
+
+  <div id="result"></div>
+
+  <div class="controls">
+    <button id="next">Try again</button>
+    <button id="toggleLegend" class="ghost">Cheat sheet</button>
+  </div>
+
+  <div id="legend" hidden></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var GLYPH = { up: "↑", right: "→", down: "↓", left: "←" };
+
+  // =====================================================================
+  //  STRATS — each defines its board cells + the 8 player assignments.
+  //  cell ids map to a 5x5 grid via {r,c} (0-indexed); dir = arrow shown.
+  // =====================================================================
+  var STRATS = {
+
+    // ---- Merry-Go-Round: clockwise ring on a 5x5 perimeter ----
+    merry: {
+      label: "Merry-Go-Round",
+      center: { row: "2 / 5", col: "2 / 5", text: "Everyone<br>orients<br>clockwise" },
+      cells: {
+        c00:{r:0,c:0,dir:"right"}, c01:{r:0,c:1,dir:"right"}, c02:{r:0,c:2,dir:"right"}, c03:{r:0,c:3,dir:"right"}, c04:{r:0,c:4,dir:"down"},
+        c14:{r:1,c:4,dir:"down"},  c24:{r:2,c:4,dir:"down"},  c34:{r:3,c:4,dir:"down"},  c44:{r:4,c:4,dir:"left"},
+        c43:{r:4,c:3,dir:"left"},  c42:{r:4,c:2,dir:"left"},  c41:{r:4,c:1,dir:"left"},  c40:{r:4,c:0,dir:"up"},
+        c30:{r:3,c:0,dir:"up"},    c20:{r:2,c:0,dir:"up"},    c10:{r:1,c:0,dir:"up"}
+      },
+      players: [
+        { type:"match", arrows:[{dir:"up",cell:"c20"},   {dir:"up",cell:"c30"}] },
+        { type:"match", arrows:[{dir:"right",cell:"c01"},{dir:"right",cell:"c02"}] },
+        { type:"match", arrows:[{dir:"down",cell:"c14"}, {dir:"down",cell:"c24"}] },
+        { type:"match", arrows:[{dir:"left",cell:"c42"}, {dir:"left",cell:"c43"}] },
+        { type:"mixed", arrows:[{dir:"up",cell:"c10"},   {dir:"right",cell:"c00"}] }, // TL
+        { type:"mixed", arrows:[{dir:"right",cell:"c03"},{dir:"down",cell:"c04"}] },  // TR
+        { type:"mixed", arrows:[{dir:"down",cell:"c34"}, {dir:"left",cell:"c44"}] },  // BR
+        { type:"mixed", arrows:[{dir:"left",cell:"c41"}, {dir:"up",cell:"c40"}] }     // BL
+      ],
+      legend:
+        '<h3>Merry-Go-Round · Arrow → Spot</h3><table>' +
+        '<tr><td class="k cyan">↑ ↑</td><td>left edge</td><td class="k cyan">→ →</td><td>top edge</td></tr>' +
+        '<tr><td class="k cyan">↓ ↓</td><td>right edge</td><td class="k cyan">← ←</td><td>bottom edge</td></tr>' +
+        '<tr><td class="k pink">↑ →</td><td>top-left</td><td class="k pink">→ ↓</td><td>top-right</td></tr>' +
+        '<tr><td class="k pink">↓ ←</td><td>bottom-right</td><td class="k pink">← ↑</td><td>bottom-left</td></tr>' +
+        '</table><div class="hint"><span class="cyan">Matching</span> = both arrows same → two cells on one edge, ' +
+        '<b>any order</b>.<br><span class="pink">Mixed</span> = corner turn → drop the <b>7s</b> arrow first.</div>'
+    },
+
+    // ---- Filipino: four 2x2 boxes, one per quadrant ----
+    filipino: {
+      label: "Filipino",
+      center: { row: "3 / 4", col: "1 / 6", text: "Filipino · 2×2 boxes" },
+      cells: {
+        // NW box (rows 0-1, cols 0-1)
+        NWnw:{r:0,c:0,dir:"down"}, NWne:{r:0,c:1,dir:"left"}, NWsw:{r:1,c:0,dir:"down"}, NWse:{r:1,c:1,dir:"up"},
+        // NE box (rows 0-1, cols 3-4)
+        NEnw:{r:0,c:3,dir:"left"}, NEne:{r:0,c:4,dir:"left"}, NEsw:{r:1,c:3,dir:"right"}, NEse:{r:1,c:4,dir:"up"},
+        // SW box (rows 3-4, cols 0-1)
+        SWnw:{r:3,c:0,dir:"down"}, SWne:{r:3,c:1,dir:"left"}, SWsw:{r:4,c:0,dir:"right"}, SWse:{r:4,c:1,dir:"right"},
+        // SE box (rows 3-4, cols 3-4)
+        SEnw:{r:3,c:3,dir:"down"}, SEne:{r:3,c:4,dir:"up"}, SEsw:{r:4,c:3,dir:"right"}, SEse:{r:4,c:4,dir:"up"}
+      },
+      players: [
+        { type:"match", arrows:[{dir:"up",cell:"SEne"},   {dir:"up",cell:"SEse"}] },    // M-UP   -> SE box
+        { type:"match", arrows:[{dir:"right",cell:"SWsw"},{dir:"right",cell:"SWse"}] },  // M-RIGHT-> SW box
+        { type:"match", arrows:[{dir:"down",cell:"NWnw"}, {dir:"down",cell:"NWsw"}] },   // M-DOWN -> NW box
+        { type:"match", arrows:[{dir:"left",cell:"NEne"}, {dir:"left",cell:"NEnw"}] },   // M-LEFT -> NE box
+        { type:"mixed", arrows:[{dir:"up",cell:"NEse"},   {dir:"right",cell:"NEsw"}] },  // X-UR   -> NE box
+        { type:"mixed", arrows:[{dir:"down",cell:"SEnw"}, {dir:"right",cell:"SEsw"}] },  // X-RD   -> SE box
+        { type:"mixed", arrows:[{dir:"down",cell:"SWnw"}, {dir:"left",cell:"SWne"}] },   // X-DL   -> SW box
+        { type:"mixed", arrows:[{dir:"up",cell:"NWse"},   {dir:"left",cell:"NWne"}] }    // X-LU   -> NW box
+      ],
+      legend:
+        '<h3>Filipino · 2×2 boxes (1 matched + 1 mixed per box)</h3><table>' +
+        '<tr><td class="k">NW</td><td class="cyan">↓↓</td><td class="pink">←↑</td><td>top-left box</td></tr>' +
+        '<tr><td class="k">NE</td><td class="cyan">←←</td><td class="pink">↑→</td><td>top-right box</td></tr>' +
+        '<tr><td class="k">SE</td><td class="cyan">↑↑</td><td class="pink">→↓</td><td>bottom-right box</td></tr>' +
+        '<tr><td class="k">SW</td><td class="cyan">→→</td><td class="pink">↓←</td><td>bottom-left box</td></tr>' +
+        '</table><div class="hint"><span class="cyan">Matching</span> = two cells in your box, <b>any order</b>.<br>' +
+        '<span class="pink">Mixed</span> = two cells in your box, drop the <b>7s</b> arrow first.</div>'
+    }
+  };
+
+  var STRAT_ORDER = ["merry", "filipino"];
+
+  function rint(n){ return Math.floor(Math.random()*n); }
+
+  // ---- DOM refs ----
+  var board    = document.getElementById("board");
+  var assignEl = document.getElementById("assign");
+  var resultEl = document.getElementById("result");
+  var legendEl = document.getElementById("legend");
+  var nextBtn  = document.getElementById("next");
+  var tabsEl   = document.getElementById("tabs");
+
+  // ---- mutable state ----
+  var strat = null;      // current strat object
+  var cellEls = {};      // id -> element (rebuilt per strat)
+  var round = null;
+  var selection = [];
+  var locked = false;
+  var startTime = 0;
+
+  // ---- build strat tabs ----
+  STRAT_ORDER.forEach(function (key) {
+    var b = document.createElement("button");
+    b.className = "tab";
+    b.textContent = STRATS[key].label;
+    b.dataset.key = key;
+    b.addEventListener("click", function () { selectStrat(key); });
+    tabsEl.appendChild(b);
+  });
+
+  function selectStrat(key) {
+    strat = STRATS[key];
+    Array.prototype.forEach.call(tabsEl.children, function (b) {
+      b.classList.toggle("active", b.dataset.key === key);
+    });
+    buildBoard();
+    newRound();
+  }
+
+  function buildBoard() {
+    board.innerHTML = "";
+    cellEls = {};
+    Object.keys(strat.cells).forEach(function (id) {
+      var c = strat.cells[id];
+      var el = document.createElement("div");
+      el.className = "cell";
+      el.style.gridRow = c.r + 1;
+      el.style.gridColumn = c.c + 1;
+      el.textContent = GLYPH[c.dir];
+      el.dataset.id = id;
+      el.addEventListener("click", function () { onCellClick(id); });
+      board.appendChild(el);
+      cellEls[id] = el;
+    });
+    var label = document.createElement("div");
+    label.className = "center-label";
+    label.style.gridRow = strat.center.row;
+    label.style.gridColumn = strat.center.col;
+    label.innerHTML = strat.center.text;
+    board.appendChild(label);
+
+    legendEl.innerHTML = strat.legend;
+  }
+
+  function newRound() {
+    Object.keys(cellEls).forEach(function (id) {
+      cellEls[id].className = "cell";
+      var o = cellEls[id].querySelector(".order");
+      if (o) o.remove();
+    });
+    selection = [];
+    locked = false;
+    resultEl.textContent = "";
+    resultEl.className = "";
+
+    var player = strat.players[rint(strat.players.length)];
+    var arrows = player.arrows.map(function (a) { return { dir:a.dir, cell:a.cell }; });
+    var first7 = rint(2);
+    arrows[first7].timer = 7;
+    arrows[1 - first7].timer = 10;
+
+    round = {
+      type: player.type,
+      arrows: arrows,
+      cells: [arrows[0].cell, arrows[1].cell],
+      sevenCell: arrows[first7].cell
+    };
+
+    renderAssignment(round);
+    startTime = performance.now();
+  }
+
+  function renderAssignment(r) {
+    assignEl.innerHTML = "";
+    var tag = document.createElement("div");
+    tag.className = "roleTag " + (r.type === "mixed" ? "mixed" : "match");
+    tag.textContent = r.type === "mixed" ? "Mixed" : "Matching";
+
+    var order = rint(2) ? [0,1] : [1,0]; // randomize display order so position never leaks 7s
+    var tiles = order.map(function (i) {
+      var a = r.arrows[i];
+      var t = document.createElement("div");
+      t.className = "arrowTile";
+      t.innerHTML = '<span class="timer t' + a.timer + '">' + a.timer + 's</span>' +
+                    '<span class="glyph">' + GLYPH[a.dir] + '</span>';
+      return t;
+    });
+
+    assignEl.appendChild(tiles[0]);
+    assignEl.appendChild(tag);
+    assignEl.appendChild(tiles[1]);
+  }
+
+  function onCellClick(id) {
+    if (locked) return;
+    var idx = selection.indexOf(id);
+    if (idx !== -1) { selection.splice(idx, 1); redrawSelection(); return; }
+    if (selection.length >= 2) return;
+    selection.push(id);
+    redrawSelection();
+    if (selection.length === 2) submit();
+  }
+
+  function redrawSelection() {
+    Object.keys(cellEls).forEach(function (id) {
+      var el = cellEls[id];
+      el.classList.remove("sel");
+      var o = el.querySelector(".order");
+      if (o) o.remove();
+    });
+    selection.forEach(function (id, i) {
+      var el = cellEls[id];
+      el.classList.add("sel");
+      var badge = document.createElement("div");
+      badge.className = "order";
+      badge.textContent = (i + 1);
+      el.appendChild(badge);
+    });
+  }
+
+  function submit() {
+    locked = true;
+    var elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
+
+    var want = round.cells.slice().sort().join(",");
+    var got  = selection.slice().sort().join(",");
+    var rightCells = (want === got);
+
+    var orderOk = true;
+    if (round.type === "mixed") orderOk = (selection[0] === round.sevenCell);
+
+    if (rightCells && orderOk) {
+      selection.forEach(function (id) { cellEls[id].classList.add("ok"); });
+      resultEl.className = "ok";
+      resultEl.innerHTML = "Correct!<span id='time'>" + elapsed + "s</span>";
+    } else {
+      selection.forEach(function (id) { cellEls[id].classList.add("bad"); });
+      showSolution();
+      resultEl.className = "bad";
+      var why = !rightCells ? "Wrong spot." : "Right spot, wrong order — 7s first.";
+      resultEl.innerHTML = why + "<span id='time'>" + elapsed + "s</span>";
+    }
+    nextBtn.focus();
+  }
+
+  function showSolution() {
+    round.arrows.forEach(function (a) {
+      var el = cellEls[a.cell];
+      el.classList.add("solution");
+      if (round.type === "mixed") {
+        var badge = el.querySelector(".order") || document.createElement("div");
+        badge.className = "order";
+        badge.textContent = a.timer === 7 ? "1" : "2";
+        if (!el.contains(badge)) el.appendChild(badge);
+      }
+    });
+  }
+
+  // ---- controls ----
+  nextBtn.addEventListener("click", newRound);
+  document.getElementById("toggleLegend").addEventListener("click", function () {
+    legendEl.hidden = !legendEl.hidden;
+  });
+  document.addEventListener("keydown", function (e) {
+    if ((e.key === " " || e.key === "Enter") && locked) { e.preventDefault(); newRound(); }
+  });
+
+  selectStrat("merry");
+})();
+</script>
+</body>
+</html>
