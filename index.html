@@ -137,7 +137,7 @@
 </head>
 <body>
   <h1>UMAD · P1 Arrows</h1>
-  <div class="sub">Everyone orients clockwise · drop the 7s puddle first</div>
+  <div class="sub" id="sub"></div>
 
   <div class="tabs" id="tabs"></div>
 
@@ -169,6 +169,7 @@
     // ---- Merry-Go-Round: clockwise ring on a 5x5 perimeter ----
     merry: {
       label: "Merry-Go-Round",
+      sub: "Everyone orients clockwise · drop the 7s puddle first",
       center: { row: "2 / 5", col: "2 / 5", text: "Everyone<br>orients<br>clockwise" },
       cells: {
         c00:{r:0,c:0,dir:"right"}, c01:{r:0,c:1,dir:"right"}, c02:{r:0,c:2,dir:"right"}, c03:{r:0,c:3,dir:"right"}, c04:{r:0,c:4,dir:"down"},
@@ -199,6 +200,7 @@
     // ---- Filipino: four 2x2 boxes, one per quadrant ----
     filipino: {
       label: "Filipino",
+      sub: "Form a 2×2 box in your quadrant · drop the 7s puddle first",
       center: { row: "3 / 4", col: "1 / 6", text: "Filipino · 2×2 boxes" },
       cells: {
         // NW box (rows 0-1, cols 0-1)
@@ -271,6 +273,7 @@
   }
 
   function buildBoard() {
+    document.getElementById("sub").textContent = strat.sub;
     board.innerHTML = "";
     cellEls = {};
     Object.keys(strat.cells).forEach(function (id) {
