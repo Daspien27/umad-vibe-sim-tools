@@ -216,9 +216,9 @@
         { type:"match", arrows:[{dir:"down",cell:"NWnw"}, {dir:"down",cell:"NWsw"}] },   // M-DOWN -> NW box
         { type:"match", arrows:[{dir:"left",cell:"NEne"}, {dir:"left",cell:"NEnw"}] },   // M-LEFT -> NE box
         { type:"mixed", arrows:[{dir:"up",cell:"NEse"},   {dir:"right",cell:"NEsw"}] },  // X-UR   -> NE box
-        { type:"mixed", arrows:[{dir:"down",cell:"SEnw"}, {dir:"right",cell:"SEsw"}] },  // X-RD   -> SE box
+        { type:"mixed", arrows:[{dir:"right",cell:"SEsw"}, {dir:"down",cell:"SEnw"}] },  // X-RD   -> SE box (shown R then D)
         { type:"mixed", arrows:[{dir:"down",cell:"SWnw"}, {dir:"left",cell:"SWne"}] },   // X-DL   -> SW box
-        { type:"mixed", arrows:[{dir:"up",cell:"NWse"},   {dir:"left",cell:"NWne"}] }    // X-LU   -> NW box
+        { type:"mixed", arrows:[{dir:"left",cell:"NWne"}, {dir:"up",cell:"NWse"}] }    // X-LU   -> NW box (shown L then U)
       ],
       legend:
         '<h3>Filipino · 2×2 boxes (1 matched + 1 mixed per box)</h3><table>' +
@@ -329,7 +329,7 @@
     tag.className = "roleTag " + (r.type === "mixed" ? "mixed" : "match");
     tag.textContent = r.type === "mixed" ? "Mixed" : "Matching";
 
-    var order = rint(2) ? [0,1] : [1,0]; // randomize display order so position never leaks 7s
+    var order = [0, 1]; // fixed arrangement (UU/LL/RR/DD, RD, DL, UR, LU); only the timers are random
     var tiles = order.map(function (i) {
       var a = r.arrows[i];
       var t = document.createElement("div");
