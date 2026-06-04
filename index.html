@@ -99,6 +99,7 @@
   .cell.bad   { border-color: var(--red);   color: var(--red);   box-shadow: 0 0 18px rgba(255,77,94,.5); }
   .cell.solution { border-color: var(--green); }
   .cell.solution .order { background: var(--green); }
+  #board.hide-arrows .cglyph { visibility: hidden; }
   .center-label {
     display: flex; align-items: center; justify-content: center;
     text-align: center; color: var(--muted);
@@ -149,6 +150,7 @@
 
   <div class="controls">
     <button id="next">Try again</button>
+    <button id="toggleArrows" class="ghost">Hide arrows</button>
     <button id="toggleLegend" class="ghost">Cheat sheet</button>
   </div>
 
@@ -252,6 +254,11 @@
   var selection = [];
   var locked = false;
   var startTime = 0;
+  var arrowsHidden = false; // user preference; arrows reveal once a round is locked
+
+  function applyArrowVisibility() {
+    board.classList.toggle("hide-arrows", arrowsHidden && !locked);
+  }
 
   // ---- build strat tabs ----
   STRAT_ORDER.forEach(function (key) {
@@ -282,7 +289,7 @@
       el.className = "cell";
       el.style.gridRow = c.r + 1;
       el.style.gridColumn = c.c + 1;
-      el.textContent = GLYPH[c.dir];
+      el.innerHTML = '<span class="cglyph">' + GLYPH[c.dir] + '</span>';
       el.dataset.id = id;
       el.addEventListener("click", function () { onCellClick(id); });
       board.appendChild(el);
@@ -323,6 +330,7 @@
     };
 
     renderAssignment(round);
+    applyArrowVisibility(); // re-hide for the new round if the toggle is on
     startTime = performance.now();
   }
 
@@ -376,6 +384,7 @@
 
   function submit() {
     locked = true;
+    applyArrowVisibility(); // reveal arrows now that the answer is locked
     var elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
 
     var want = round.cells.slice().sort().join(",");
@@ -416,6 +425,11 @@
   nextBtn.addEventListener("click", newRound);
   document.getElementById("toggleLegend").addEventListener("click", function () {
     legendEl.hidden = !legendEl.hidden;
+  });
+  document.getElementById("toggleArrows").addEventListener("click", function () {
+    arrowsHidden = !arrowsHidden;
+    this.textContent = arrowsHidden ? "Show arrows" : "Hide arrows";
+    applyArrowVisibility();
   });
   document.addEventListener("keydown", function (e) {
     if ((e.key === " " || e.key === "Enter") && locked) { e.preventDefault(); newRound(); }
