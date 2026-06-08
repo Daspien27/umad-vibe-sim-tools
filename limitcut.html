@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UMAD P3 Limit Cut — Reaction Trainer</title>
+<style>
+  :root {
+    --bg: #07070e;
+    --panel: #11121d;
+    --edge: #2a2c42;
+    --cyan: #38c6ff;
+    --pink: #ff5fcb;
+    --gold: #f5a623;
+    --green: #36e07f;
+    --red: #ff4d5e;
+    --violet: #9d7bff;
+    --text: #e8eaf6;
+    --muted: #8a8da8;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: radial-gradient(circle at 50% 38%, #16172a 0%, var(--bg) 70%);
+    color: var(--text);
+    font-family: "Segoe UI", system-ui, sans-serif;
+    -webkit-user-select: none; user-select: none;
+  }
+  body {
+    display: flex; flex-direction: column; align-items: center;
+    min-height: 100%; padding: 16px 12px 40px;
+  }
+  h1 {
+    font-size: 1.25rem; letter-spacing: 0.14em; margin: 4px 0 2px;
+    text-transform: uppercase; color: #fff; font-weight: 800;
+  }
+  .sub { color: var(--muted); font-size: 0.78rem; letter-spacing: 0.06em; margin-bottom: 6px; }
+  .nav a { color: var(--cyan); font-weight: 700; text-decoration: none; }
+  .nav a:hover { text-decoration: underline; }
+
+  /* ---- assignment (your pip) ---- */
+  #assign {
+    display: flex; gap: 14px; align-items: center; justify-content: center;
+    min-height: 84px; margin: 8px 0 4px;
+  }
+  .pip {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: var(--panel); border: 2px solid var(--cyan);
+    box-shadow: 0 0 18px rgba(56,198,255,.35);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2.1rem; font-weight: 800; color: #fff;
+  }
+  .pip .lbl {
+    position: absolute; margin-top: -78px;
+    font-size: 0.66rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted);
+  }
+
+  /* ---- arena ---- */
+  #arena { touch-action: manipulation; }
+  .disc { fill: #0b0c16; stroke: var(--edge); stroke-width: 2; }
+  .grid { stroke: #1b1d2e; stroke-width: 1.5; }
+
+  .wm { font-weight: 800; }
+  .wm .bg-card { fill: var(--panel); }
+  .wm .bg-inter { fill: var(--panel); }
+  .wm text { font-size: 15px; font-weight: 800; text-anchor: middle; dominant-baseline: central; fill: #06070d; }
+
+  .spot {
+    fill: #0d0e18; stroke: var(--edge); stroke-width: 2; cursor: pointer;
+    transition: fill .12s, stroke .12s;
+  }
+  .spot:hover { fill: #182036; stroke: #4a4d70; }
+  .spot.ok   { fill: rgba(54,224,127,.18); stroke: var(--green); stroke-width: 3; }
+  .spot.bad  { fill: rgba(255,77,94,.18);  stroke: var(--red);   stroke-width: 3; }
+  .spot.solution { stroke: var(--green); stroke-width: 3; }
+  .spot-num { font-size: 13px; font-weight: 800; text-anchor: middle; dominant-baseline: central; fill: var(--green); pointer-events: none; }
+
+  .dash-line { stroke: var(--gold); stroke-width: 2; stroke-dasharray: 5 5; opacity: .55; }
+  .dash-arc  { stroke: var(--gold); stroke-width: 4; fill: none; stroke-linecap: round; }
+  .dash-head { fill: var(--gold); }
+  .dash-lbl  { font-size: 11px; letter-spacing: 0.12em; fill: var(--gold); text-anchor: middle; font-weight: 700; }
+
+  .reln-ring { fill: none; stroke: var(--cyan); stroke-width: 2.5; stroke-dasharray: 4 4; }
+  .reln-lbl  { font-size: 11px; letter-spacing: 0.12em; fill: var(--cyan); text-anchor: middle; font-weight: 800; }
+  .count-arc { stroke: var(--cyan); stroke-width: 3; fill: none; stroke-linecap: round; opacity: .9; }
+  .count-head { fill: var(--cyan); }
+
+  /* ---- result / controls ---- */
+  #result { min-height: 26px; font-size: 1.05rem; font-weight: 700; letter-spacing: 0.02em; margin-top: 8px; text-align: center; }
+  #result.ok  { color: var(--green); }
+  #result.bad { color: var(--red); }
+  #result .why { display: block; font-size: 0.82rem; font-weight: 500; color: var(--muted); margin-top: 3px; }
+  #time { color: var(--muted); font-size: 0.85rem; margin-left: 8px; font-weight: 500; }
+  .controls { display: flex; gap: 10px; margin-top: 12px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  button {
+    font: inherit; font-weight: 700; letter-spacing: 0.04em;
+    color: #06070d; background: var(--cyan);
+    border: none; border-radius: 10px; padding: 10px 22px; cursor: pointer;
+  }
+  button:hover { filter: brightness(1.08); }
+  button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--edge); }
+  button.ghost:hover { color: var(--text); border-color: #4a4d70; }
+  button.ghost.on { color: #06070d; background: var(--muted); border-color: var(--muted); }
+
+  /* ---- legend ---- */
+  #legend {
+    margin-top: 18px; background: var(--panel); border: 1px solid var(--edge);
+    border-radius: 12px; padding: 14px 18px; max-width: 560px; font-size: 0.84rem; line-height: 1.55;
+  }
+  #legend[hidden] { display: none; }
+  #legend h3 { margin: 0 0 8px; font-size: 0.8rem; letter-spacing: 0.1em; color: var(--cyan); text-transform: uppercase; }
+  #legend ol { margin: 6px 0; padding-left: 20px; color: var(--muted); }
+  #legend b { color: var(--text); }
+  #legend .src { margin-top: 10px; font-size: 0.8rem; }
+  #legend a { color: var(--cyan); font-weight: 700; text-decoration: none; }
+  #legend a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+  <h1>UMAD · P3 Limit Cut</h1>
+  <div class="sub">Read the dash · invert origin &amp; spin · click your number's spot</div>
+  <div class="sub nav"><a href="index.html">← P1 Arrows</a></div>
+
+  <div id="assign"></div>
+
+  <svg id="arena" width="460" height="460" viewBox="-230 -230 460 460" aria-label="Limit Cut arena"></svg>
+
+  <div id="result"></div>
+
+  <div class="controls">
+    <button id="next">Next</button>
+    <button id="toggleHint" class="ghost">Show Rel N</button>
+    <button id="toggleLegend" class="ghost">Cheat sheet</button>
+  </div>
+
+  <div id="legend" hidden></div>
+
+<script src="limitcut-engine.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  var SVGNS = "http://www.w3.org/2000/svg";
+  var LC = window.LimitCut;
+
+  // ---- radii (svg units; viewBox is 460 wide, center 0,0) ----
+  var R_DISC = 210;
+  var R_WAY  = 188;   // waymark markers
+  var R_SPOT = 150;   // clickable dodge spots
+  var R_ARC  = 200;   // rotation arc near the dash origin
+  var SPOT_R = 22;    // dodge spot radius
+
+  var WM_COLOR = { A: "#ff4d5e", B: "#f5a623", C: "#38c6ff", D: "#9d7bff",
+                   "1": "#ff8fb0", "2": "#ffd27a", "3": "#7fd8ff", "4": "#c4b0ff" };
+
+  // ---- DOM ----
+  var arena    = document.getElementById("arena");
+  var assignEl = document.getElementById("assign");
+  var resultEl = document.getElementById("result");
+  var legendEl = document.getElementById("legend");
+  var nextBtn  = document.getElementById("next");
+  var hintBtn  = document.getElementById("toggleHint");
+
+  // ---- state ----
+  var scenario = null;   // { origin, rotation, number }
+  var answer   = null;   // resolve() result
+  var spotEls  = [];     // index -> <circle>
+  var locked   = false;
+  var startTime = 0;
+  var hintOn   = false;
+
+  function el(tag, attrs) {
+    var n = document.createElementNS(SVGNS, tag);
+    for (var k in attrs) if (attrs.hasOwnProperty(k)) n.setAttribute(k, attrs[k]);
+    return n;
+  }
+  function xy(angle, radius) { return LC.angleToXY(angle, radius); }
+
+  // Build an SVG arc path between two angles at a radius. `cw` = sweep direction.
+  function arcPath(a0, a1, radius, cw) {
+    var p0 = xy(a0, radius), p1 = xy(a1, radius);
+    var delta = ((a1 - a0) + 360) % 360;
+    var largeArc = delta > 180 ? 1 : 0;
+    // SVG sweep-flag: 1 = positive-angle (clockwise on screen because y is down).
+    var sweep = cw ? 1 : 0;
+    if (!cw) { largeArc = (((a0 - a1) + 360) % 360) > 180 ? 1 : 0; }
+    return "M " + p0.x.toFixed(2) + " " + p0.y.toFixed(2) +
+           " A " + radius + " " + radius + " 0 " + largeArc + " " + sweep + " " +
+           p1.x.toFixed(2) + " " + p1.y.toFixed(2);
+  }
+
+  // Arrowhead triangle pointing tangent to the circle at `angle`, in `cw` direction.
+  function arrowHead(angle, radius, cw, cls) {
+    var tip = xy(angle, radius);
+    // tangent direction (degrees): +90 of radial for CW, -90 for CCW
+    var tanDeg = angle + (cw ? 90 : -90);
+    var tanRad = tanDeg * Math.PI / 180;
+    var tdir = { x: Math.sin(tanRad), y: -Math.cos(tanRad) }; // pointing along travel
+    // radial inward/outward for the base spread
+    var rad = angle * Math.PI / 180;
+    var rdir = { x: Math.sin(rad), y: -Math.cos(rad) };
+    var L = 14, W = 7;
+    var bx = tip.x - tdir.x * L, by = tip.y - tdir.y * L;
+    var p1x = bx + rdir.x * W, p1y = by + rdir.y * W;
+    var p2x = bx - rdir.x * W, p2y = by - rdir.y * W;
+    return el("polygon", {
+      points: tip.x.toFixed(2)+","+tip.y.toFixed(2)+" "+p1x.toFixed(2)+","+p1y.toFixed(2)+" "+p2x.toFixed(2)+","+p2y.toFixed(2),
+      class: cls
+    });
+  }
+
+  function buildStatic() {
+    arena.innerHTML = "";
+    arena.appendChild(el("circle", { class: "disc", cx: 0, cy: 0, r: R_DISC }));
+    // cardinal + intercardinal guide lines
+    [0, 45, 90, 135].forEach(function (a) {
+      var p0 = xy(a, R_DISC), p1 = xy(a + 180, R_DISC);
+      arena.appendChild(el("line", { class: "grid", x1: p0.x, y1: p0.y, x2: p1.x, y2: p1.y }));
+    });
+    // waymarks
+    LC.WAYMARKS.forEach(function (w) {
+      var p = xy(w.angle, R_WAY);
+      var g = el("g", { class: "wm" });
+      if (w.kind === "card") {
+        g.appendChild(el("circle", { cx: p.x, cy: p.y, r: 15, fill: WM_COLOR[w.mark] }));
+      } else {
+        g.appendChild(el("rect", { x: p.x - 14, y: p.y - 14, width: 28, height: 28, rx: 5, fill: WM_COLOR[w.mark] }));
+      }
+      var t = el("text", { x: p.x, y: p.y }); t.textContent = w.mark;
+      g.appendChild(t);
+      arena.appendChild(g);
+    });
+    // dynamic layers go into these groups
+    arena.appendChild(el("g", { id: "g-hint" }));
+    arena.appendChild(el("g", { id: "g-dash" }));
+    var gs = el("g", { id: "g-spots" });
+    arena.appendChild(gs);
+    // dodge spots
+    spotEls = [];
+    LC.DODGE_SPOTS.forEach(function (ang, i) {
+      var p = xy(ang, R_SPOT);
+      var c = el("circle", { class: "spot", cx: p.x, cy: p.y, r: SPOT_R, "data-i": i });
+      c.addEventListener("click", function () { onSpot(i); });
+      gs.appendChild(c);
+      spotEls.push(c);
+    });
+  }
+
+  function clearGroup(id) { var g = document.getElementById(id); if (g) g.innerHTML = ""; }
+
+  function drawDash() {
+    clearGroup("g-dash");
+    var g = document.getElementById("g-dash");
+    var o = scenario.origin.angle;
+    var opp = (o + 180) % 360;
+    // faint straight dash across the arena
+    var a = xy(o, R_WAY - 10), b = xy(opp, R_WAY - 10);
+    g.appendChild(el("line", { class: "dash-line", x1: a.x, y1: a.y, x2: b.x, y2: b.y }));
+    // curved rotation arc hugging the rim, starting at the origin
+    var cw = scenario.rotation === "CW";
+    var a1 = cw ? o + 60 : o - 60;
+    g.appendChild(el("path", { class: "dash-arc", d: arcPath(cw ? o : a1, cw ? a1 : o, R_ARC, true) }));
+    g.appendChild(arrowHead(a1, R_ARC, cw, "dash-head"));
+    var lp = xy(o, R_ARC + 18);
+    var lbl = el("text", { class: "dash-lbl", x: lp.x, y: lp.y }); lbl.textContent = "DASH";
+    g.appendChild(lbl);
+  }
+
+  function drawHint() {
+    clearGroup("g-hint");
+    if (!hintOn || !scenario) return;
+    var g = document.getElementById("g-hint");
+    var R = LC.relNorth(scenario.origin.angle);
+    var rp = xy(R, R_WAY);
+    g.appendChild(el("circle", { class: "reln-ring", cx: rp.x, cy: rp.y, r: 20 }));
+    var tp = xy(R, R_WAY - 34);
+    var lbl = el("text", { class: "reln-lbl", x: tp.x, y: tp.y }); lbl.textContent = "REL N";
+    g.appendChild(lbl);
+    // count-direction arc: opposite of Kefka's spin, starting at Rel N
+    var countCW = scenario.rotation === "CCW"; // players count opposite
+    var a1 = countCW ? R + 55 : R - 55;
+    g.appendChild(el("path", { class: "count-arc", d: arcPath(countCW ? R : a1, countCW ? a1 : R, R_SPOT + 34, true) }));
+    g.appendChild(arrowHead(a1, R_SPOT + 34, countCW, "count-head"));
+  }
+
+  function renderAssign() {
+    assignEl.innerHTML = "";
+    var lbl = document.createElement("div"); lbl.className = "pip lbl"; lbl.textContent = "Your number";
+    var pip = document.createElement("div"); pip.className = "pip";
+    pip.appendChild(lbl);
+    pip.appendChild(document.createTextNode(scenario.number));
+    assignEl.appendChild(pip);
+  }
+
+  function newRound() {
+    scenario = LC.deal();
+    answer = LC.resolve({ originAngle: scenario.origin.angle, rotation: scenario.rotation, number: scenario.number });
+    locked = false;
+    resultEl.textContent = ""; resultEl.className = "";
+    spotEls.forEach(function (c) { c.setAttribute("class", "spot"); });
+    var gs = document.getElementById("g-spots");
+    Array.prototype.slice.call(gs.querySelectorAll(".spot-num")).forEach(function (n) { n.remove(); });
+    renderAssign();
+    drawDash();
+    drawHint();
+    startTime = performance.now();
+  }
+
+  function labelSpot(i, txt) {
+    var p = xy(LC.DODGE_SPOTS[i], R_SPOT);
+    var t = el("text", { class: "spot-num", x: p.x, y: p.y }); t.textContent = txt;
+    document.getElementById("g-spots").appendChild(t);
+  }
+
+  function onSpot(i) {
+    if (locked) return;
+    locked = true;
+    var elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
+    var correct = (i === answer.spotIndex);
+    if (correct) {
+      spotEls[i].classList.add("ok");
+      resultEl.className = "ok";
+      resultEl.innerHTML = "Correct!<span id='time'>" + elapsed + "s</span>";
+    } else {
+      spotEls[i].classList.add("bad");
+      spotEls[answer.spotIndex].classList.add("solution");
+      labelSpot(answer.spotIndex, scenario.number);
+      resultEl.className = "bad";
+      resultEl.innerHTML = "Wrong spot.<span id='time'>" + elapsed + "s</span>" +
+        "<span class='why'>" + reason() + "</span>";
+    }
+    nextBtn.focus();
+  }
+
+  function markAt(angle) {
+    var w = LC.WAYMARKS.filter(function (x) { return x.angle === angle; })[0];
+    return w ? w.mark : ("" + angle + "°");
+  }
+
+  function reason() {
+    var R = LC.relNorth(scenario.origin.angle);
+    var count = scenario.rotation === "CCW" ? "CW" : "CCW";
+    return "Dash from " + scenario.origin.mark + " → Rel N = " + markAt(R) +
+           ". Kefka " + scenario.rotation + " → count " + count +
+           ". #" + scenario.number + " is " + scenario.number + " spot(s) " + count + " of Rel N.";
+  }
+
+  // ---- controls ----
+  nextBtn.addEventListener("click", newRound);
+  hintBtn.addEventListener("click", function () {
+    hintOn = !hintOn;
+    hintBtn.classList.toggle("on", hintOn);
+    drawHint();
+  });
+  document.getElementById("toggleLegend").addEventListener("click", function () {
+    legendEl.hidden = !legendEl.hidden;
+  });
+  document.addEventListener("keydown", function (e) {
+    if ((e.key === " " || e.key === "Enter") && locked) { e.preventDefault(); newRound(); }
+  });
+
+  legendEl.innerHTML =
+    '<h3>Limit Cut · the rule</h3>' +
+    '<ol>' +
+    '<li><b>Rel N</b> = the waymark <b>opposite</b> Kefka’s first dash origin.</li>' +
+    '<li>Count <b>opposite</b> Kefka’s spin (Kefka CCW → you count CW).</li>' +
+    '<li>From Rel N, step your <b>Limit Cut number</b> of dodge spots in that direction.</li>' +
+    '</ol>' +
+    '<div>Waymarks: <b>A</b>=N, <b>B</b>=E, <b>C</b>=S, <b>D</b>=W; <b>1</b>=NW, <b>2</b>=NE, <b>3</b>=SE, <b>4</b>=SW. ' +
+    'The 8 dodge spots sit halfway between them.</div>' +
+    '<div class="src">Mechanic: UMAD P3 Kefka Limit Cut — “opposite origin, opposite spin, count your number.”</div>';
+
+  buildStatic();
+  newRound();
+})();
+</script>
+</body>
+</html>

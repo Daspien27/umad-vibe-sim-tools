@@ -36,6 +36,18 @@ no dependencies, no network.
    cells. **Try again** (or Space/Enter) deals the next hand. **Cheat sheet** toggles the
    current strat's mapping.
 
+## P3 Limit Cut trainer
+
+`limitcut.html` — a solo reaction trainer for the Phase 3 **Limit Cut** dodge. Each round
+shows Kefka's first dash (origin + rotation) and your Limit Cut number (1–8); you click
+your dodge spot as fast as possible. The rule, in three steps: **Rel N** is the waymark
+*opposite* the dash origin, you count *opposite* Kefka's spin (Kefka CCW → you count CW),
+and you step your number of inter-inter-cardinal spots from Rel N. A **Show Rel N** toggle
+scaffolds the anchor + count direction; **Cheat sheet** restates the rule.
+
+Resolution logic lives in `limitcut-engine.js` (pure, DOM-free); run its tests with
+`node --test`.
+
 ## License
 
 MIT
