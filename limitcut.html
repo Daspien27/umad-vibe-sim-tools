@@ -115,6 +115,8 @@
   #legend h3 { margin: 0 0 8px; font-size: 0.8rem; letter-spacing: 0.1em; color: var(--cyan); text-transform: uppercase; }
   #legend ol { margin: 6px 0; padding-left: 20px; color: var(--muted); }
   #legend b { color: var(--text); }
+  #legend .lead { margin: 0 0 9px; color: var(--text); font-size: 0.86rem; }
+  #legend .ex { margin: 9px 0; padding: 7px 10px; border-left: 2px solid var(--gold); background: rgba(245,166,35,.07); color: var(--muted); border-radius: 0 6px 6px 0; }
   #legend .src { margin-top: 10px; font-size: 0.8rem; }
   #legend a { color: var(--cyan); font-weight: 700; text-decoration: none; }
   #legend a:hover { text-decoration: underline; }
@@ -155,10 +157,14 @@
 
   // ---- radii (svg units; viewBox is 460 wide, center 0,0) ----
   var R_DISC = 210;
-  var R_WAY  = 132;   // waymark markers — pulled inward
+  var R_WAY  = 132;             // cardinal waymarks (A/B/C/D)
+  var R_WAY_INTER = R_WAY / Math.SQRT2; // intercardinals (1-4) sit at 1/√2 the cardinal radius (in-game ratio)
   var R_SPOT = 182;   // clickable dodge spots — out near the edge
   var R_ARC  = 224;   // rotation / count arcs — outside the arena rim
   var SPOT_R = 21;    // dodge spot radius
+
+  // a waymark's radius from center: cardinals out, intercardinals pulled in
+  function wayRadius(angle) { return (angle % 90 === 0) ? R_WAY : R_WAY_INTER; }
 
   var WM_COLOR = { A: "#ff4d5e", B: "#f5a623", C: "#38c6ff", D: "#9d7bff",
                    "1": "#ff8fb0", "2": "#ffd27a", "3": "#7fd8ff", "4": "#c4b0ff" };
@@ -230,7 +236,7 @@
     });
     // waymarks
     LC.WAYMARKS.forEach(function (w) {
-      var p = xy(w.angle, R_WAY);
+      var p = xy(w.angle, wayRadius(w.angle));
       var g = el("g", { class: "wm" });
       if (w.kind === "card") {
         g.appendChild(el("circle", { cx: p.x, cy: p.y, r: 15, fill: WM_COLOR[w.mark] }));
@@ -284,13 +290,19 @@
     var lineEnd = { x: b.x - dir.x * 14, y: b.y - dir.y * 14 };
     g.appendChild(el("line", { class: "dash-line", x1: a.x, y1: a.y, x2: lineEnd.x, y2: lineEnd.y }));
     g.appendChild(lineArrowHead(b, dir, "dash-head"));
-    // curved rotation arc outside the rim, arrowhead in the spin direction
+    // curved rotation arcs outside the rim: one by the origin, one at the far end
     var cw = scenario.rotation === "CW";
     var a1 = cw ? o + 60 : o - 60;
     g.appendChild(el("path", { class: "dash-arc", d: arcPath(cw ? o : a1, cw ? a1 : o, R_ARC, true) }));
     g.appendChild(arrowHead(a1, R_ARC, cw, "dash-head"));
-    var lp = xy(o, R_ARC + 14);
-    // anchor the label inward so it never runs off-canvas at E/W
+    var a2 = cw ? opp + 60 : opp - 60;
+    g.appendChild(el("path", { class: "dash-arc", d: arcPath(cw ? opp : a2, cw ? a2 : opp, R_ARC, true) }));
+    g.appendChild(arrowHead(a2, R_ARC, cw, "dash-head"));
+    // offset the label to the side of the origin (away from the dash line and the
+    // near arc) so the dashed line doesn't run through the text
+    var labelAngle = cw ? (o - 24) : (o + 24);
+    var lp = xy(labelAngle, R_ARC + 14);
+    // anchor inward so it never runs off-canvas at E/W
     var anchor = lp.x > 25 ? "end" : (lp.x < -25 ? "start" : "middle");
     var lbl = el("text", { class: "dash-lbl", x: lp.x, y: lp.y, "text-anchor": anchor });
     lbl.textContent = "DASH";
@@ -302,9 +314,10 @@
     if (!hintOn || !scenario) return;
     var g = document.getElementById("g-hint");
     var R = LC.relNorth(scenario.origin.angle);
-    var rp = xy(R, R_WAY);
+    var rWay = wayRadius(R);
+    var rp = xy(R, rWay);
     g.appendChild(el("circle", { class: "reln-ring", cx: rp.x, cy: rp.y, r: 19 }));
-    var tp = xy(R, R_WAY - 30);
+    var tp = xy(R, rWay - 30);
     var lbl = el("text", { class: "reln-lbl", x: tp.x, y: tp.y }); lbl.textContent = "REL N";
     g.appendChild(lbl);
     // count-direction arc: opposite of Kefka's spin, starting at Rel N
@@ -481,15 +494,21 @@
   });
 
   legendEl.innerHTML =
-    '<h3>Limit Cut · the rule</h3>' +
+    '<h3>Limit Cut · resolving the mech</h3>' +
+    '<p class="lead">Resolve your spot using 3 pieces of information — <b>relative north</b>, <b>rotation</b>, then <b>your number</b>.</p>' +
     '<ol>' +
-    '<li><b>Rel N</b> = the waymark <b>opposite</b> Kefka’s first dash origin.</li>' +
-    '<li>Count <b>opposite</b> Kefka’s spin (Kefka CCW → you count CW).</li>' +
-    '<li>From Rel N, step your <b>Limit Cut number</b> of dodge spots in that direction.</li>' +
+    '<li><b>Relative north.</b> Kefka’s first dash sets it: Rel N is where that dash <b>ends</b> ' +
+      '(the waymark opposite where it started). Reorient and treat that point as north.</li>' +
+    '<li><b>Rotation.</b> His dashes sweep around the circle one way — you resolve the <b>opposite</b> ' +
+      'way (Kefka CCW → you go CW).</li>' +
+    '<li><b>Your number.</b> From Rel N, the 8 dodge spots count <b>1–8</b> in your rotation; ' +
+      'take <b>your Limit Cut number</b>.</li>' +
     '</ol>' +
+    '<div class="ex"><b>Example:</b> dashes <b>C→A</b> then <b>3→1</b> → Kefka spins <b>CCW</b>, ' +
+      'so Rel N = <b>A</b> and you resolve <b>CW</b>; count 1–8 clockwise from A.</div>' +
     '<div>Waymarks: <b>A</b>=N, <b>B</b>=E, <b>C</b>=S, <b>D</b>=W; <b>1</b>=NW, <b>2</b>=NE, <b>3</b>=SE, <b>4</b>=SW. ' +
     'The 8 dodge spots sit halfway between them.</div>' +
-    '<div class="src">Mechanic: UMAD P3 Kefka Limit Cut — “opposite origin, opposite spin, count your number.”</div>';
+    '<div class="src">Source: <a href="https://raidplan.io/plan/9assfrb4fcvwat9e" target="_blank" rel="noopener">UMAD P3 Limit Cut raidplan ↗</a></div>';
 
   buildStatic();
   newRound();
