@@ -35,6 +35,15 @@
   }
   .sub { color: var(--muted); font-size: 0.78rem; letter-spacing: 0.06em; margin-bottom: 12px; }
 
+  /* ---- cross-tool nav (shared snippet across every tool page) ---- */
+  .toolnav { display: flex; gap: 8px; margin: 2px 0 14px; flex-wrap: wrap; justify-content: center; }
+  .toolnav a {
+    font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; color: var(--muted);
+    text-decoration: none; border: 1px solid var(--edge); border-radius: 999px; padding: 5px 14px;
+  }
+  .toolnav a:hover { color: var(--text); border-color: #4a4d70; }
+  .toolnav a.active { color: #06070d; background: var(--cyan); border-color: var(--cyan); }
+
   /* ---- strat tabs ---- */
   .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
   .tab {
@@ -142,7 +151,12 @@
 <body>
   <h1>UMAD · P1 Arrows</h1>
   <div class="sub" id="sub"></div>
-  <div class="sub"><a href="limitcut.html" style="color:#38c6ff;font-weight:700;text-decoration:none;">P3 Limit Cut trainer →</a></div>
+
+  <!-- Cross-tool nav. Add a link here when a new mechanic tool ships. -->
+  <nav class="toolnav">
+    <a href="index.html" class="active">P1 Arrows</a>
+    <a href="limitcut.html">P3 Limit Cut</a>
+  </nav>
 
   <div class="tabs" id="tabs"></div>
 

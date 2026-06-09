@@ -48,6 +48,23 @@ scaffolds the anchor + count direction; **Cheat sheet** restates the rule.
 Resolution logic lives in `limitcut-engine.js` (pure, DOM-free); run its tests with
 `node --test`.
 
+## Project layout · adding a tool
+
+Each mechanic is a flat, self-contained page at the repo root (stable URLs, no build):
+
+- `index.html` — the front door / **P1 Arrows** tool (stays at `/`).
+- `<mech>.html` — one page per mechanic (e.g. `limitcut.html`).
+- `<mech>-engine.js` / `<mech>-engine.test.js` — optional pure, DOM-free logic + `node --test`.
+
+To add a new tiny tool:
+
+1. Create `<mech>.html` (copy an existing page's shell for the shared dark theme).
+   Put any non-trivial resolution logic in a pure `<mech>-engine.js` with tests.
+2. Add a link to the `.toolnav` block **on every page** (the snippet is marked with a
+   comment); mark the current page's link `class="active"`.
+
+Keeping pages flat means every existing URL (`/`, `/limitcut.html`, …) stays valid.
+
 ## License
 
 MIT

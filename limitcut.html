@@ -35,25 +35,27 @@
     text-transform: uppercase; color: #fff; font-weight: 800;
   }
   .sub { color: var(--muted); font-size: 0.78rem; letter-spacing: 0.06em; margin-bottom: 6px; }
-  .nav a { color: var(--cyan); font-weight: 700; text-decoration: none; }
-  .nav a:hover { text-decoration: underline; }
+
+  /* ---- cross-tool nav (shared snippet across every tool page) ---- */
+  .toolnav { display: flex; gap: 8px; margin: 6px 0 14px; flex-wrap: wrap; justify-content: center; }
+  .toolnav a {
+    font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; color: var(--muted);
+    text-decoration: none; border: 1px solid var(--edge); border-radius: 999px; padding: 5px 14px;
+  }
+  .toolnav a:hover { color: var(--text); border-color: #4a4d70; }
+  .toolnav a.active { color: #06070d; background: var(--cyan); border-color: var(--cyan); }
 
   /* ---- assignment (your pip) ---- */
   #assign {
     display: flex; gap: 14px; align-items: center; justify-content: center;
     min-height: 84px; margin: 8px 0 4px;
   }
-  .pip {
-    width: 64px; height: 64px; border-radius: 50%;
-    background: var(--panel); border: 2px solid var(--cyan);
-    box-shadow: 0 0 18px rgba(56,198,255,.35);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 2.1rem; font-weight: 800; color: #fff;
-  }
-  .pip .lbl {
-    position: absolute; margin-top: -78px;
+  .assignWrap { display: flex; flex-direction: column; align-items: center; gap: 7px; }
+  .assignWrap .lbl {
     font-size: 0.66rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted);
   }
+  /* Limit Cut head marker: counting-egg dice pips (blue = odd, red = even) */
+  .lcmark { line-height: 0; filter: drop-shadow(0 2px 3px rgba(0,0,0,.45)); }
 
   /* ---- arena ---- */
   #arena { touch-action: manipulation; }
@@ -73,12 +75,14 @@
   .spot.ok   { fill: rgba(54,224,127,.18); stroke: var(--green); stroke-width: 3; }
   .spot.bad  { fill: rgba(255,77,94,.18);  stroke: var(--red);   stroke-width: 3; }
   .spot.solution { stroke: var(--green); stroke-width: 3; }
-  .spot-num { font-size: 13px; font-weight: 800; text-anchor: middle; dominant-baseline: central; fill: var(--green); pointer-events: none; }
+  .spot-num { font-size: 14px; font-weight: 800; text-anchor: middle; dominant-baseline: central; fill: #aab0d4; pointer-events: none; }
+  .spot-num.correct { fill: var(--green); }
+  .spot-num.wrong   { fill: var(--red); }
 
   .dash-line { stroke: var(--gold); stroke-width: 2; stroke-dasharray: 5 5; opacity: .55; }
   .dash-arc  { stroke: var(--gold); stroke-width: 4; fill: none; stroke-linecap: round; }
   .dash-head { fill: var(--gold); }
-  .dash-lbl  { font-size: 11px; letter-spacing: 0.12em; fill: var(--gold); text-anchor: middle; font-weight: 700; }
+  .dash-lbl  { font-size: 11px; letter-spacing: 0.12em; fill: var(--gold); font-weight: 700; }
 
   .reln-ring { fill: none; stroke: var(--cyan); stroke-width: 2.5; stroke-dasharray: 4 4; }
   .reln-lbl  { font-size: 11px; letter-spacing: 0.12em; fill: var(--cyan); text-anchor: middle; font-weight: 800; }
@@ -119,17 +123,23 @@
 <body>
   <h1>UMAD · P3 Limit Cut</h1>
   <div class="sub">Read the dash · invert origin &amp; spin · click your number's spot</div>
-  <div class="sub nav"><a href="index.html">← P1 Arrows</a></div>
+
+  <!-- Cross-tool nav. Add a link here when a new mechanic tool ships. -->
+  <nav class="toolnav">
+    <a href="index.html">P1 Arrows</a>
+    <a href="limitcut.html" class="active">P3 Limit Cut</a>
+  </nav>
 
   <div id="assign"></div>
 
-  <svg id="arena" width="460" height="460" viewBox="-230 -230 460 460" aria-label="Limit Cut arena"></svg>
+  <svg id="arena" width="500" height="500" viewBox="-250 -250 500 500" aria-label="Limit Cut arena"></svg>
 
   <div id="result"></div>
 
   <div class="controls">
-    <button id="next">Next</button>
+    <button id="next">Try again</button>
     <button id="toggleHint" class="ghost">Show Rel N</button>
+    <button id="toggleLock" class="ghost">Lock Rel N to N</button>
     <button id="toggleLegend" class="ghost">Cheat sheet</button>
   </div>
 
@@ -145,10 +155,10 @@
 
   // ---- radii (svg units; viewBox is 460 wide, center 0,0) ----
   var R_DISC = 210;
-  var R_WAY  = 188;   // waymark markers
-  var R_SPOT = 150;   // clickable dodge spots
-  var R_ARC  = 200;   // rotation arc near the dash origin
-  var SPOT_R = 22;    // dodge spot radius
+  var R_WAY  = 132;   // waymark markers — pulled inward
+  var R_SPOT = 182;   // clickable dodge spots — out near the edge
+  var R_ARC  = 224;   // rotation / count arcs — outside the arena rim
+  var SPOT_R = 21;    // dodge spot radius
 
   var WM_COLOR = { A: "#ff4d5e", B: "#f5a623", C: "#38c6ff", D: "#9d7bff",
                    "1": "#ff8fb0", "2": "#ffd27a", "3": "#7fd8ff", "4": "#c4b0ff" };
@@ -168,6 +178,7 @@
   var locked   = false;
   var startTime = 0;
   var hintOn   = false;
+  var lockRelN = false;  // when on, Rel N is pinned to true North (dash always from C/S)
 
   function el(tag, attrs) {
     var n = document.createElementNS(SVGNS, tag);
@@ -248,21 +259,41 @@
 
   function clearGroup(id) { var g = document.getElementById(id); if (g) g.innerHTML = ""; }
 
+  // Straight arrowhead at `tip`, pointing along unit vector `dir`.
+  function lineArrowHead(tip, dir, cls) {
+    var perp = { x: -dir.y, y: dir.x };
+    var L = 16, W = 8;
+    var bx = tip.x - dir.x * L, by = tip.y - dir.y * L;
+    var p1 = { x: bx + perp.x * W, y: by + perp.y * W };
+    var p2 = { x: bx - perp.x * W, y: by - perp.y * W };
+    return el("polygon", {
+      points: tip.x.toFixed(2)+","+tip.y.toFixed(2)+" "+p1.x.toFixed(2)+","+p1.y.toFixed(2)+" "+p2.x.toFixed(2)+","+p2.y.toFixed(2),
+      class: cls
+    });
+  }
+
   function drawDash() {
     clearGroup("g-dash");
     var g = document.getElementById("g-dash");
     var o = scenario.origin.angle;
     var opp = (o + 180) % 360;
-    // faint straight dash across the arena
-    var a = xy(o, R_WAY - 10), b = xy(opp, R_WAY - 10);
-    g.appendChild(el("line", { class: "dash-line", x1: a.x, y1: a.y, x2: b.x, y2: b.y }));
-    // curved rotation arc hugging the rim, starting at the origin
+    // directional dash arrow: full diameter, from the origin edge across to the opposite edge
+    var a = xy(o, R_DISC - 2), b = xy(opp, R_DISC - 2);
+    var dx = b.x - a.x, dy = b.y - a.y, len = Math.sqrt(dx * dx + dy * dy);
+    var dir = { x: dx / len, y: dy / len };
+    var lineEnd = { x: b.x - dir.x * 14, y: b.y - dir.y * 14 };
+    g.appendChild(el("line", { class: "dash-line", x1: a.x, y1: a.y, x2: lineEnd.x, y2: lineEnd.y }));
+    g.appendChild(lineArrowHead(b, dir, "dash-head"));
+    // curved rotation arc outside the rim, arrowhead in the spin direction
     var cw = scenario.rotation === "CW";
     var a1 = cw ? o + 60 : o - 60;
     g.appendChild(el("path", { class: "dash-arc", d: arcPath(cw ? o : a1, cw ? a1 : o, R_ARC, true) }));
     g.appendChild(arrowHead(a1, R_ARC, cw, "dash-head"));
-    var lp = xy(o, R_ARC + 18);
-    var lbl = el("text", { class: "dash-lbl", x: lp.x, y: lp.y }); lbl.textContent = "DASH";
+    var lp = xy(o, R_ARC + 14);
+    // anchor the label inward so it never runs off-canvas at E/W
+    var anchor = lp.x > 25 ? "end" : (lp.x < -25 ? "start" : "middle");
+    var lbl = el("text", { class: "dash-lbl", x: lp.x, y: lp.y, "text-anchor": anchor });
+    lbl.textContent = "DASH";
     g.appendChild(lbl);
   }
 
@@ -272,28 +303,97 @@
     var g = document.getElementById("g-hint");
     var R = LC.relNorth(scenario.origin.angle);
     var rp = xy(R, R_WAY);
-    g.appendChild(el("circle", { class: "reln-ring", cx: rp.x, cy: rp.y, r: 20 }));
-    var tp = xy(R, R_WAY - 34);
+    g.appendChild(el("circle", { class: "reln-ring", cx: rp.x, cy: rp.y, r: 19 }));
+    var tp = xy(R, R_WAY - 30);
     var lbl = el("text", { class: "reln-lbl", x: tp.x, y: tp.y }); lbl.textContent = "REL N";
     g.appendChild(lbl);
     // count-direction arc: opposite of Kefka's spin, starting at Rel N
     var countCW = scenario.rotation === "CCW"; // players count opposite
     var a1 = countCW ? R + 55 : R - 55;
-    g.appendChild(el("path", { class: "count-arc", d: arcPath(countCW ? R : a1, countCW ? a1 : R, R_SPOT + 34, true) }));
-    g.appendChild(arrowHead(a1, R_SPOT + 34, countCW, "count-head"));
+    g.appendChild(el("path", { class: "count-arc", d: arcPath(countCW ? R : a1, countCW ? a1 : R, R_ARC, true) }));
+    g.appendChild(arrowHead(a1, R_ARC, countCW, "count-head"));
+  }
+
+  // Inline SVG of the in-game Limit Cut "counting egg" head marker: dots grouped
+  // into recognisable clusters (a dot, a 3-dot triangle, a 2x2 block) placed left
+  // to right. Blue for odd numbers, red for even; numeral kept below.
+  //   1=dot  2=pair  3=triangle  4=2x2
+  //   5=dot+2x2  6=triangle+triangle  7=triangle+2x2  8=2x2+2x2
+  var S_DOT  = [[0, 0]];
+  var S_PAIR = [[0, 0], [1, 0]];
+  var S_TRI  = [[0.5, 0], [0, 1], [1, 1]];         // apex up
+  var S_SQ   = [[0, 0], [1, 0], [0, 1], [1, 1]];   // 2x2
+  var PIP_GROUPS = {
+    1: [S_DOT], 2: [S_PAIR], 3: [S_TRI], 4: [S_SQ],
+    5: [S_DOT, S_SQ], 6: [S_TRI, S_TRI], 7: [S_TRI, S_SQ], 8: [S_SQ, S_SQ]
+  };
+
+  // Lay a number's groups left to right (grid units), vertically centered together.
+  function pipDots(num) {
+    var groups = PIP_GROUPS[num] || [S_DOT];
+    var GAP = 1.35, out = [], xOff = 0, targetC = 0;
+    groups.forEach(function (g) {
+      var rs = g.map(function (d) { return d[1]; });
+      var c = (Math.min.apply(null, rs) + Math.max.apply(null, rs)) / 2;
+      if (c > targetC) targetC = c;
+    });
+    groups.forEach(function (g) {
+      var cs = g.map(function (d) { return d[0]; });
+      var rs = g.map(function (d) { return d[1]; });
+      var minCol = Math.min.apply(null, cs), maxCol = Math.max.apply(null, cs);
+      var gc = (Math.min.apply(null, rs) + Math.max.apply(null, rs)) / 2;
+      var dyShift = targetC - gc;
+      g.forEach(function (d) { out.push([xOff + (d[0] - minCol), d[1] + dyShift]); });
+      xOff += (maxCol - minCol) + GAP;
+    });
+    return out;
+  }
+
+  function lcMarkSVG(num) {
+    var odd = (num % 2) === 1;
+    var fill = odd ? "#4f9dff" : "#f0544f";
+    var edge = odd ? "#2f6fc8" : "#c2332e";
+    var S = 16, r = 6.4;
+    var grid = pipDots(num);
+    var xs = grid.map(function (d) { return d[0] * S; });
+    var ys = grid.map(function (d) { return d[1] * S; });
+    var minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
+    var minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys);
+    var cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+    var circles = "";
+    for (var i = 0; i < grid.length; i++) {
+      circles += '<circle cx="' + (xs[i] - cx).toFixed(1) + '" cy="' + (ys[i] - cy).toFixed(1) +
+                 '" r="' + r + '" fill="' + fill + '" stroke="' + edge + '" stroke-width="1.1"/>';
+    }
+    var halfW = (maxX - minX) / 2 + r + 4;
+    var halfH = (maxY - minY) / 2 + r + 4;
+    var vbW = Math.max(halfW * 2, 38);
+    var vbH = halfH * 2 + 24;
+    var numY = halfH + 11;
+    return '<svg width="' + Math.round(vbW) + '" height="' + Math.round(vbH) +
+      '" viewBox="' + (-vbW / 2).toFixed(1) + ' ' + (-halfH - 2).toFixed(1) + ' ' + vbW.toFixed(1) + ' ' + vbH.toFixed(1) +
+      '" aria-label="Limit Cut ' + num + '">' +
+      circles +
+      '<text x="0" y="' + numY.toFixed(1) + '" text-anchor="middle" dominant-baseline="middle" ' +
+        'font-family="Segoe UI, system-ui, sans-serif" font-size="13" font-weight="800" fill="' + fill + '">' + num + '</text>' +
+      '</svg>';
   }
 
   function renderAssign() {
     assignEl.innerHTML = "";
-    var lbl = document.createElement("div"); lbl.className = "pip lbl"; lbl.textContent = "Your number";
-    var pip = document.createElement("div"); pip.className = "pip";
-    pip.appendChild(lbl);
-    pip.appendChild(document.createTextNode(scenario.number));
-    assignEl.appendChild(pip);
+    var wrap = document.createElement("div"); wrap.className = "assignWrap";
+    var lbl = document.createElement("div"); lbl.className = "lbl"; lbl.textContent = "Your Limit Cut number";
+    var mark = document.createElement("div"); mark.className = "lcmark"; mark.innerHTML = lcMarkSVG(scenario.number);
+    wrap.appendChild(lbl); wrap.appendChild(mark);
+    assignEl.appendChild(wrap);
   }
 
   function newRound() {
     scenario = LC.deal();
+    if (lockRelN) {
+      // pin Rel N to true North => the dash must originate from the opposite waymark (C/S)
+      scenario.origin = { mark: "C", angle: 180, kind: "card" };
+    }
     answer = LC.resolve({ originAngle: scenario.origin.angle, rotation: scenario.rotation, number: scenario.number });
     locked = false;
     resultEl.textContent = ""; resultEl.className = "";
@@ -306,10 +406,25 @@
     startTime = performance.now();
   }
 
-  function labelSpot(i, txt) {
+  function labelSpot(i, txt, variant) {
     var p = xy(LC.DODGE_SPOTS[i], R_SPOT);
-    var t = el("text", { class: "spot-num", x: p.x, y: p.y }); t.textContent = txt;
+    var t = el("text", { class: "spot-num" + (variant ? " " + variant : ""), x: p.x, y: p.y });
+    t.textContent = txt;
     document.getElementById("g-spots").appendChild(t);
+  }
+
+  // After a guess, reveal every spot's Limit Cut number inside its circle:
+  // the correct spot green, the player's wrong pick red, the rest muted.
+  function revealNumbers(chosenIdx) {
+    var numForSpot = {};
+    for (var n = 1; n <= 8; n++) {
+      var s = LC.resolve({ originAngle: scenario.origin.angle, rotation: scenario.rotation, number: n }).spotIndex;
+      numForSpot[s] = n;
+    }
+    for (var i = 0; i < 8; i++) {
+      var variant = (i === answer.spotIndex) ? "correct" : (i === chosenIdx ? "wrong" : "");
+      labelSpot(i, numForSpot[i], variant);
+    }
   }
 
   function onSpot(i) {
@@ -324,11 +439,11 @@
     } else {
       spotEls[i].classList.add("bad");
       spotEls[answer.spotIndex].classList.add("solution");
-      labelSpot(answer.spotIndex, scenario.number);
       resultEl.className = "bad";
       resultEl.innerHTML = "Wrong spot.<span id='time'>" + elapsed + "s</span>" +
         "<span class='why'>" + reason() + "</span>";
     }
+    revealNumbers(i);
     nextBtn.focus();
   }
 
@@ -351,6 +466,12 @@
     hintOn = !hintOn;
     hintBtn.classList.toggle("on", hintOn);
     drawHint();
+  });
+  var lockBtn = document.getElementById("toggleLock");
+  lockBtn.addEventListener("click", function () {
+    lockRelN = !lockRelN;
+    lockBtn.classList.toggle("on", lockRelN);
+    newRound();
   });
   document.getElementById("toggleLegend").addEventListener("click", function () {
     legendEl.hidden = !legendEl.hidden;
