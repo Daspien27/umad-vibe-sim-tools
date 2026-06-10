@@ -146,6 +146,24 @@
   #legend a { color: var(--cyan); font-weight: 700; text-decoration: none; }
   #legend a:hover { text-decoration: underline; }
   .pink { color: var(--pink); } .cyan { color: var(--cyan); }
+
+  /* ---- about / info panel ---- */
+  #about {
+    margin-top: 14px; background: var(--panel); border: 1px solid var(--edge);
+    border-radius: 12px; padding: 14px 18px; max-width: 560px; font-size: 0.82rem; line-height: 1.6;
+  }
+  #about[hidden] { display: none; }
+  #about h3 { margin: 0 0 8px; font-size: 0.8rem; letter-spacing: 0.1em; color: var(--cyan); text-transform: uppercase; }
+  #about b { color: var(--text); }
+  #about .row { margin: 6px 0; color: var(--muted); }
+  #about .hk { margin: 4px 0 4px 14px; color: var(--muted); }
+  #about .credit { margin-top: 10px; color: var(--muted); font-size: 0.8rem; }
+  #about a { color: var(--cyan); font-weight: 700; text-decoration: none; }
+  #about a:hover { text-decoration: underline; }
+  #about kbd {
+    background: #0d0e18; border: 1px solid var(--edge); border-radius: 5px;
+    padding: 1px 7px; font-family: inherit; font-size: 0.8rem; color: var(--text); font-weight: 700;
+  }
 </style>
 </head>
 <body>
@@ -167,12 +185,22 @@
   <div id="result"></div>
 
   <div class="controls">
-    <button id="next">Try again</button>
+    <button id="next" title="New Round — press R">Try again</button>
     <button id="toggleArrows" class="ghost">Hide arrows</button>
     <button id="toggleLegend" class="ghost">Cheat sheet</button>
+    <button id="toggleAbout" class="ghost">About</button>
   </div>
 
   <div id="legend" hidden></div>
+  <div id="about" hidden>
+    <h3>About</h3>
+    <div class="row"><b>Hotkeys</b></div>
+    <div class="hk"><kbd>R</kbd> — new hand (any time)</div>
+    <div class="hk"><kbd>Space</kbd> / <kbd>Enter</kbd> — new hand (after you answer)</div>
+    <div class="hk"><kbd>click</kbd> — your two cells in drop order</div>
+    <div class="row">Source: <a href="https://github.com/Daspien27/umad-vibe-sim-tools" target="_blank" rel="noopener">github.com/Daspien27/umad-vibe-sim-tools&nbsp;&#8599;</a></div>
+    <div class="credit">Created by <b>Daspien</b> &middot; with the assistance of Claude</div>
+  </div>
 
 <script>
 (function () {
@@ -445,6 +473,10 @@
   nextBtn.addEventListener("click", newRound);
   document.getElementById("toggleLegend").addEventListener("click", function () {
     legendEl.hidden = !legendEl.hidden;
+  });
+  var aboutEl = document.getElementById("about");
+  document.getElementById("toggleAbout").addEventListener("click", function () {
+    aboutEl.hidden = !aboutEl.hidden;
   });
   document.getElementById("toggleArrows").addEventListener("click", function () {
     arrowsHidden = !arrowsHidden;
