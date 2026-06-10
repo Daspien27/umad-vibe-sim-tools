@@ -82,12 +82,7 @@
   .dash-line { stroke: var(--gold); stroke-width: 2; stroke-dasharray: 5 5; opacity: .55; }
   .dash-arc  { stroke: var(--gold); stroke-width: 4; fill: none; stroke-linecap: round; }
   .dash-head { fill: var(--gold); }
-  .dash-lbl  { font-size: 11px; letter-spacing: 0.12em; fill: var(--gold); font-weight: 700; }
-
-  .reln-ring { fill: none; stroke: var(--cyan); stroke-width: 2.5; stroke-dasharray: 4 4; }
-  .reln-lbl  { font-size: 11px; letter-spacing: 0.12em; fill: var(--cyan); text-anchor: middle; font-weight: 800; }
-  .count-arc { stroke: var(--cyan); stroke-width: 3; fill: none; stroke-linecap: round; opacity: .9; }
-  .count-head { fill: var(--cyan); }
+  .dash-lbl  { font-size: 11px; letter-spacing: 0.12em; fill: var(--gold); font-weight: 700; dominant-baseline: central; }
 
   /* ---- result / controls ---- */
   #result { min-height: 26px; font-size: 1.05rem; font-weight: 700; letter-spacing: 0.02em; margin-top: 8px; text-align: center; }
@@ -105,6 +100,10 @@
   button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--edge); }
   button.ghost:hover { color: var(--text); border-color: #4a4d70; }
   button.ghost.on { color: #06070d; background: var(--muted); border-color: var(--muted); }
+  /* "Lock Rel N" label + compact N/S toggle pair */
+  .lockgroup { display: inline-flex; align-items: center; gap: 6px; }
+  .lockgroup .lbl { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; color: var(--muted); }
+  .lockgroup .seg { padding: 10px 15px; min-width: 40px; }
 
   /* ---- legend ---- */
   #legend {
@@ -140,8 +139,10 @@
 
   <div class="controls">
     <button id="next">Try again</button>
-    <button id="toggleHint" class="ghost">Show Rel N</button>
-    <button id="toggleLock" class="ghost">Lock Rel N to N</button>
+    <span class="lockgroup"><span class="lbl">Lock&nbsp;Dash&nbsp;as&nbsp;Relative</span>
+      <button id="toggleLock" class="ghost seg" title="Lock Dash as Relative North">N</button>
+      <button id="toggleLockS" class="ghost seg" title="Lock Dash as Relative South">S</button></span>
+    <button id="toggleWaymarks" class="ghost">Hide waymarks</button>
     <button id="toggleLegend" class="ghost">Cheat sheet</button>
   </div>
 
@@ -175,16 +176,17 @@
   var resultEl = document.getElementById("result");
   var legendEl = document.getElementById("legend");
   var nextBtn  = document.getElementById("next");
-  var hintBtn  = document.getElementById("toggleHint");
 
   // ---- state ----
-  var scenario = null;   // { origin, rotation, number }
+  var baseDeal = null;   // the raw random deal (rng); persists across Rel-N lock toggles
+  var scenario = null;   // { origin, rotation, number } — baseDeal with the lock applied
   var answer   = null;   // resolve() result
   var spotEls  = [];     // index -> <circle>
   var locked   = false;
   var startTime = 0;
-  var hintOn   = false;
-  var lockRelN = false;  // when on, Rel N is pinned to true North (dash always from C/S)
+  var relLock  = null;   // null | "N" | "S" — pins Rel N to true North or South (exclusive)
+  var viewRot  = 0;      // board rotation (deg) the Rel-N lock applies to reorient the arena
+  var waymarksHidden = false;
 
   function el(tag, attrs) {
     var n = document.createElementNS(SVGNS, tag);
@@ -226,17 +228,34 @@
     });
   }
 
+  // position at a BOARD angle, rotated into the current view frame (Rel-N lock)
+  function pxy(angle, r) { return xy(angle + viewRot, r); }
+
   function buildStatic() {
     arena.innerHTML = "";
     arena.appendChild(el("circle", { class: "disc", cx: 0, cy: 0, r: R_DISC }));
-    // cardinal + intercardinal guide lines
+    // groups redrawn per round (they rotate with the view); disc stays put.
+    // order = paint order: dash sits behind the waymarks, spots on top.
+    arena.appendChild(el("g", { id: "g-grid" }));
+    arena.appendChild(el("g", { id: "g-dash" }));
+    arena.appendChild(el("g", { id: "g-way" }));
+    arena.appendChild(el("g", { id: "g-spots" }));
+  }
+
+  function drawGrid() {
+    var g = document.getElementById("g-grid"); g.innerHTML = "";
     [0, 45, 90, 135].forEach(function (a) {
-      var p0 = xy(a, R_DISC), p1 = xy(a + 180, R_DISC);
-      arena.appendChild(el("line", { class: "grid", x1: p0.x, y1: p0.y, x2: p1.x, y2: p1.y }));
+      var p0 = pxy(a, R_DISC), p1 = pxy(a + 180, R_DISC);
+      g.appendChild(el("line", { class: "grid", x1: p0.x, y1: p0.y, x2: p1.x, y2: p1.y }));
     });
-    // waymarks
+  }
+
+  function drawWaymarks() {
+    var host = document.getElementById("g-way"); host.innerHTML = "";
     LC.WAYMARKS.forEach(function (w) {
-      var p = xy(w.angle, wayRadius(w.angle));
+      // radius keyed to the on-screen position (not identity) so every orientation
+      // renders an evenly-spaced cross-out / diamond-in; the label still rotates
+      var p = pxy(w.angle, wayRadius(w.angle + viewRot)); // position rotates; glyph upright
       var g = el("g", { class: "wm" });
       if (w.kind === "card") {
         g.appendChild(el("circle", { cx: p.x, cy: p.y, r: 15, fill: WM_COLOR[w.mark] }));
@@ -245,17 +264,16 @@
       }
       var t = el("text", { x: p.x, y: p.y }); t.textContent = w.mark;
       g.appendChild(t);
-      arena.appendChild(g);
+      host.appendChild(g);
     });
-    // dynamic layers go into these groups
-    arena.appendChild(el("g", { id: "g-hint" }));
-    arena.appendChild(el("g", { id: "g-dash" }));
-    var gs = el("g", { id: "g-spots" });
-    arena.appendChild(gs);
-    // dodge spots
+    host.setAttribute("display", waymarksHidden ? "none" : "inline"); // persist the toggle across rounds
+  }
+
+  function drawSpots() {
+    var gs = document.getElementById("g-spots"); gs.innerHTML = "";
     spotEls = [];
     LC.DODGE_SPOTS.forEach(function (ang, i) {
-      var p = xy(ang, R_SPOT);
+      var p = pxy(ang, R_SPOT);
       var c = el("circle", { class: "spot", cx: p.x, cy: p.y, r: SPOT_R, "data-i": i });
       c.addEventListener("click", function () { onSpot(i); });
       gs.appendChild(c);
@@ -284,7 +302,7 @@
     var o = scenario.origin.angle;
     var opp = (o + 180) % 360;
     // directional dash arrow: full diameter, from the origin edge across to the opposite edge
-    var a = xy(o, R_DISC - 2), b = xy(opp, R_DISC - 2);
+    var a = pxy(o, R_DISC - 2), b = pxy(opp, R_DISC - 2);
     var dx = b.x - a.x, dy = b.y - a.y, len = Math.sqrt(dx * dx + dy * dy);
     var dir = { x: dx / len, y: dy / len };
     var lineEnd = { x: b.x - dir.x * 14, y: b.y - dir.y * 14 };
@@ -293,39 +311,20 @@
     // curved rotation arcs outside the rim: one by the origin, one at the far end
     var cw = scenario.rotation === "CW";
     var a1 = cw ? o + 60 : o - 60;
-    g.appendChild(el("path", { class: "dash-arc", d: arcPath(cw ? o : a1, cw ? a1 : o, R_ARC, true) }));
-    g.appendChild(arrowHead(a1, R_ARC, cw, "dash-head"));
+    g.appendChild(el("path", { class: "dash-arc", d: arcPath((cw ? o : a1) + viewRot, (cw ? a1 : o) + viewRot, R_ARC, true) }));
+    g.appendChild(arrowHead(a1 + viewRot, R_ARC, cw, "dash-head"));
     var a2 = cw ? opp + 60 : opp - 60;
-    g.appendChild(el("path", { class: "dash-arc", d: arcPath(cw ? opp : a2, cw ? a2 : opp, R_ARC, true) }));
-    g.appendChild(arrowHead(a2, R_ARC, cw, "dash-head"));
-    // offset the label to the side of the origin (away from the dash line and the
-    // near arc) so the dashed line doesn't run through the text
-    var labelAngle = cw ? (o - 24) : (o + 24);
-    var lp = xy(labelAngle, R_ARC + 14);
-    // anchor inward so it never runs off-canvas at E/W
-    var anchor = lp.x > 25 ? "end" : (lp.x < -25 ? "start" : "middle");
-    var lbl = el("text", { class: "dash-lbl", x: lp.x, y: lp.y, "text-anchor": anchor });
+    g.appendChild(el("path", { class: "dash-arc", d: arcPath((cw ? opp : a2) + viewRot, (cw ? a2 : opp) + viewRot, R_ARC, true) }));
+    g.appendChild(arrowHead(a2 + viewRot, R_ARC, cw, "dash-head"));
+    // keep the label fully outside the rim, near the dash start, nudged slightly to
+    // the side (away from the near arc) so the dashed line doesn't run through it
+    var labelAngle = cw ? (o - 6) : (o + 6);
+    var lp = pxy(labelAngle, R_DISC + 22);
+    var lbl = el("text", { class: "dash-lbl", x: lp.x, y: lp.y, "text-anchor": "middle" });
     lbl.textContent = "DASH";
     g.appendChild(lbl);
   }
 
-  function drawHint() {
-    clearGroup("g-hint");
-    if (!hintOn || !scenario) return;
-    var g = document.getElementById("g-hint");
-    var R = LC.relNorth(scenario.origin.angle);
-    var rWay = wayRadius(R);
-    var rp = xy(R, rWay);
-    g.appendChild(el("circle", { class: "reln-ring", cx: rp.x, cy: rp.y, r: 19 }));
-    var tp = xy(R, rWay - 30);
-    var lbl = el("text", { class: "reln-lbl", x: tp.x, y: tp.y }); lbl.textContent = "REL N";
-    g.appendChild(lbl);
-    // count-direction arc: opposite of Kefka's spin, starting at Rel N
-    var countCW = scenario.rotation === "CCW"; // players count opposite
-    var a1 = countCW ? R + 55 : R - 55;
-    g.appendChild(el("path", { class: "count-arc", d: arcPath(countCW ? R : a1, countCW ? a1 : R, R_ARC, true) }));
-    g.appendChild(arrowHead(a1, R_ARC, countCW, "count-head"));
-  }
 
   // Inline SVG of the in-game Limit Cut "counting egg" head marker: dots grouped
   // into recognisable clusters (a dot, a 3-dot triangle, a 2x2 block) placed left
@@ -401,26 +400,32 @@
     assignEl.appendChild(wrap);
   }
 
+  // Deal a fresh random puzzle (new rng). Only Try again / page load call this.
   function newRound() {
-    scenario = LC.deal();
-    if (lockRelN) {
-      // pin Rel N to true North => the dash must originate from the opposite waymark (C/S)
-      scenario.origin = { mark: "C", angle: 180, kind: "card" };
-    }
+    baseDeal = LC.deal();
+    renderScenario();
+  }
+
+  // Re-render the current deal with the active Rel-N lock applied. Toggling the lock
+  // calls this so it reorients (dash + Rel N) without re-rolling the number/rotation.
+  function renderScenario() {
+    scenario = { origin: baseDeal.origin, rotation: baseDeal.rotation, number: baseDeal.number };
     answer = LC.resolve({ originAngle: scenario.origin.angle, rotation: scenario.rotation, number: scenario.number });
+    // the lock rotates the whole arena so the dash ORIGIN faces screen top (N) / bottom (S)
+    var oa = scenario.origin.angle;
+    viewRot = relLock === "N" ? -oa : (relLock === "S" ? (180 - oa) : 0);
     locked = false;
     resultEl.textContent = ""; resultEl.className = "";
-    spotEls.forEach(function (c) { c.setAttribute("class", "spot"); });
-    var gs = document.getElementById("g-spots");
-    Array.prototype.slice.call(gs.querySelectorAll(".spot-num")).forEach(function (n) { n.remove(); });
+    drawGrid();
+    drawWaymarks();
+    drawSpots();      // rebuilds spotEls fresh (also clears any reveal labels)
     renderAssign();
     drawDash();
-    drawHint();
     startTime = performance.now();
   }
 
   function labelSpot(i, txt, variant) {
-    var p = xy(LC.DODGE_SPOTS[i], R_SPOT);
+    var p = pxy(LC.DODGE_SPOTS[i], R_SPOT);
     var t = el("text", { class: "spot-num" + (variant ? " " + variant : ""), x: p.x, y: p.y });
     t.textContent = txt;
     document.getElementById("g-spots").appendChild(t);
@@ -475,16 +480,22 @@
 
   // ---- controls ----
   nextBtn.addEventListener("click", newRound);
-  hintBtn.addEventListener("click", function () {
-    hintOn = !hintOn;
-    hintBtn.classList.toggle("on", hintOn);
-    drawHint();
-  });
-  var lockBtn = document.getElementById("toggleLock");
-  lockBtn.addEventListener("click", function () {
-    lockRelN = !lockRelN;
-    lockBtn.classList.toggle("on", lockRelN);
-    newRound();
+  var lockBtnN = document.getElementById("toggleLock");
+  var lockBtnS = document.getElementById("toggleLockS");
+  function setRelLock(mode) {
+    relLock = (relLock === mode) ? null : mode; // clicking the active one turns it off
+    lockBtnN.classList.toggle("on", relLock === "N");
+    lockBtnS.classList.toggle("on", relLock === "S");
+    renderScenario(); // reorient the SAME puzzle; don't re-roll the rng
+  }
+  lockBtnN.addEventListener("click", function () { setRelLock("N"); });
+  lockBtnS.addEventListener("click", function () { setRelLock("S"); });
+  var waysBtn = document.getElementById("toggleWaymarks");
+  waysBtn.addEventListener("click", function () {
+    waymarksHidden = !waymarksHidden;
+    waysBtn.classList.toggle("on", waymarksHidden);
+    waysBtn.textContent = waymarksHidden ? "Show waymarks" : "Hide waymarks";
+    document.getElementById("g-way").setAttribute("display", waymarksHidden ? "none" : "inline");
   });
   document.getElementById("toggleLegend").addEventListener("click", function () {
     legendEl.hidden = !legendEl.hidden;
