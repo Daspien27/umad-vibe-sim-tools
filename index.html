@@ -453,6 +453,7 @@
   });
   document.addEventListener("keydown", function (e) {
     if ((e.key === " " || e.key === "Enter") && locked) { e.preventDefault(); newRound(); }
+    else if (e.key === "r" || e.key === "R") { e.preventDefault(); newRound(); }
   });
 
   selectStrat("merry");
