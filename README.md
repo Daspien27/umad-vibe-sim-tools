@@ -47,6 +47,31 @@ a worked example.
 Resolution logic lives in `limitcut-engine.js` (pure, DOM-free); run its tests with
 `node --test`.
 
+## P4 Kefka Says (`kefkasays.html`)
+
+A macro-pad + chat-log utility for the Phase 4 **Kefka Says** mechanic — not a sim, but a
+practice/comms aid. Assign your call-out macros to a 5×5 pad, then click them during the
+pull to post their lines into a simulated chat log in the right channel colors.
+
+- **Two channels:** Party (`/p`) and Echo (`/e`), each with its own customizable color;
+  bare (no-command) lines post as plain text. `/micon` lines are ignored on import.
+- **Customizable macros:** the **Edit macros** window lets you add/duplicate/delete macros
+  and edit their text exactly like an in-game macro (paste straight in). Ships with 18
+  default UMAD P4 call-outs and a default pad layout.
+- **Drag to assign:** drag macros from the palette onto the pad; drag a slot onto the
+  palette (or right-click it) to clear it. **Clear log** wipes the log between attempts.
+- **Import / Export:** share your whole setup (macros + pad layout + colors) as a single
+  string.
+
+Use it alongside VOD review or a sim while drilling call-outs.
+
+Resources: [Raidplan](https://raidplan.io/plan/V-r1InYZW7VMRYAU) ·
+[Aery's P4 Macros](https://docs.google.com/spreadsheets/d/1Uo88anmlf2zectmvWMnm8j4ebMPOsFyQ-Lq33wFu7Y0/edit?usp=sharing) ·
+[DMU Sim (Waju-Sims)](https://github.com/WCGH/Waju-Sims/releases).
+
+Pure logic (macro parse/serialize, setup encode/decode, the default macros) lives in
+`kefkasays-engine.js`; run its tests with `node --test`.
+
 ## Controls
 
 Across both tools: **Try again** — or `R`, or `Space` / `Enter` after you've answered —

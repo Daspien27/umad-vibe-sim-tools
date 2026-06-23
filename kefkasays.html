@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UMAD P4 Kefka Says — Macro Pad</title>
+<style>
+  :root {
+    --bg: #07070e;
+    --panel: #11121d;
+    --edge: #2a2c42;
+    --cyan: #38c6ff;
+    --pink: #ff5fcb;
+    --gold: #f5a623;
+    --green: #36e07f;
+    --red: #ff4d5e;
+    --text: #e8eaf6;
+    --muted: #8a8da8;
+    --party: #7ec8ff;
+    --echo: #ff7ad9;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; min-height: 100%;
+    background: radial-gradient(circle at 50% 38%, #16172a 0%, var(--bg) 70%);
+    color: var(--text);
+    font-family: "Segoe UI", system-ui, sans-serif;
+  }
+  body {
+    display: flex; flex-direction: column; align-items: center;
+    min-height: 100vh; padding: 16px 12px 40px;
+  }
+  h1 {
+    font-size: 1.25rem; letter-spacing: 0.14em; margin: 4px 0 2px;
+    text-transform: uppercase; color: #fff; font-weight: 800;
+  }
+  .sub { color: var(--muted); font-size: 0.78rem; letter-spacing: 0.06em; margin-bottom: 12px; }
+
+  /* ---- cross-tool nav (shared snippet across every tool page) ---- */
+  .toolnav { display: flex; gap: 8px; margin: 2px 0 14px; flex-wrap: wrap; justify-content: center; }
+  .toolnav a {
+    font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; color: var(--muted);
+    text-decoration: none; border: 1px solid var(--edge); border-radius: 999px; padding: 5px 14px;
+  }
+  .toolnav a:hover { color: var(--text); border-color: #4a4d70; }
+  .toolnav a.active { color: #06070d; background: var(--cyan); border-color: var(--cyan); }
+
+  .stage { width: 100%; max-width: 560px; display: flex; flex-direction: column; align-items: center; }
+
+  /* ---- macro pad ---- */
+  #pad {
+    display: grid;
+    grid-template-columns: repeat(5, 96px);
+    grid-template-rows: repeat(5, 64px);
+    gap: 7px; margin: 6px 0 12px;
+  }
+  .slot {
+    border-radius: 10px; background: #0d0e18; border: 2px solid var(--edge);
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    font-size: 0.72rem; font-weight: 700; color: var(--text); padding: 4px;
+    cursor: pointer; overflow: hidden; user-select: none;
+  }
+  .slot.empty { border-style: dashed; color: var(--muted); cursor: default; }
+  .slot:not(.empty):hover { border-color: #4a4d70; background: #141624; }
+  .slot.dragover { border-color: var(--cyan); background: #141a2a; }
+
+  button {
+    font: inherit; font-weight: 700; letter-spacing: 0.04em;
+    color: #06070d; background: var(--cyan);
+    border: none; border-radius: 10px; padding: 9px 18px; cursor: pointer;
+  }
+  button:hover { filter: brightness(1.08); }
+  button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--edge); }
+  button.ghost:hover { color: var(--text); border-color: #4a4d70; }
+  .colorpick { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--muted); }
+  .colorpick input[type=color] {
+    width: 26px; height: 26px; padding: 0; border: 1px solid var(--edge);
+    border-radius: 6px; background: none; cursor: pointer;
+  }
+  /* ---- color bar (color pickers + log actions, directly above the log) ---- */
+  .colorbar { display: flex; gap: 8px 16px; justify-content: center; align-items: center; flex-wrap: wrap; margin: 4px 0 8px; }
+  .colorbar button { padding: 6px 14px; font-size: 0.74rem; }
+
+  /* ---- chat log ---- */
+  #log {
+    width: 100%; height: 260px; min-height: 140px; max-height: 80vh;
+    overflow: auto; resize: vertical;
+    background: var(--panel); border: 1px solid var(--edge); border-radius: 12px;
+    padding: 10px 14px; font-size: 0.86rem; line-height: 1.55;
+    font-family: "Consolas", "Segoe UI", monospace;
+  }
+  .logline { white-space: pre-wrap; word-break: break-word; }
+  .logline .ts { color: var(--muted); margin-right: 4px; }
+  .logline.party .msg { color: var(--party); }
+  .logline.echo  .msg { color: var(--echo); }
+  .logline.none  .msg { color: var(--text); }
+  #log .empty-hint { color: var(--muted); font-style: italic; }
+
+  /* ---- palette drawer (between pad and log; collapsible) ---- */
+  #palette {
+    width: 100%; margin: 4px 0 10px; background: var(--panel);
+    border: 1px solid var(--edge); border-radius: 12px; padding: 10px 12px;
+  }
+  .palette-head { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; }
+  .palette-head h3 { margin: 0; font-size: 0.72rem; letter-spacing: 0.1em; color: var(--cyan); text-transform: uppercase; }
+  .palette-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .palette-actions button { padding: 5px 12px; font-size: 0.7rem; letter-spacing: 0.05em; }
+  #paletteChips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  #palette.collapsed #paletteChips { display: none; }
+  .chip {
+    font-size: 0.74rem; font-weight: 700; color: var(--text);
+    background: #0d0e18; border: 1px solid var(--edge); border-radius: 8px;
+    padding: 5px 10px; cursor: grab; user-select: none;
+  }
+  .chip:hover { border-color: #4a4d70; }
+  #palette.dragover { border-color: var(--cyan); }
+
+  /* ---- modal ---- */
+  .modal { position: fixed; inset: 0; background: rgba(4,5,12,.72); display: none; z-index: 10;
+           align-items: center; justify-content: center; padding: 16px; }
+  .modal.open { display: flex; }
+  .sheet { background: var(--panel); border: 1px solid var(--edge); border-radius: 14px;
+           padding: 16px 18px; width: 100%; max-width: 640px; max-height: 86vh; overflow-y: auto; }
+  .sheet h2 { margin: 0 0 12px; font-size: 1rem; letter-spacing: 0.08em; color: #fff; }
+  .sheet label { display: block; font-size: 0.74rem; color: var(--muted); margin: 10px 0 4px; letter-spacing: .04em; }
+  .sheet input[type=text], .sheet textarea {
+    width: 100%; font: inherit; color: var(--text); background: #0d0e18;
+    border: 1px solid var(--edge); border-radius: 8px; padding: 8px 10px;
+  }
+  .sheet textarea { min-height: 140px; font-family: "Consolas", monospace; resize: vertical; }
+  .sheet .rowbtns { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .editor-grid { display: grid; grid-template-columns: 180px 1fr; gap: 14px; }
+  .macrolist { border: 1px solid var(--edge); border-radius: 8px; max-height: 320px; overflow-y: auto; }
+  .macrolist .item { padding: 7px 9px; font-size: 0.8rem; cursor: pointer; border-bottom: 1px solid #1c1e2e; }
+  .macrolist .item:hover { background: #141624; }
+  .macrolist .item.active { background: #1a2030; color: var(--cyan); }
+  .err { color: var(--red); font-size: 0.8rem; margin-top: 8px; min-height: 1em; }
+
+  /* ---- about ---- */
+  #about { margin-top: 14px; background: var(--panel); border: 1px solid var(--edge);
+           border-radius: 12px; padding: 14px 18px; max-width: 560px; font-size: 0.82rem; line-height: 1.6; }
+  #about[hidden] { display: none; }
+  #about h3 { margin: 0 0 8px; font-size: 0.8rem; letter-spacing: 0.1em; color: var(--cyan); text-transform: uppercase; }
+  #about a { color: var(--cyan); font-weight: 700; text-decoration: none; }
+  #about .credit { margin-top: 10px; color: var(--muted); font-size: 0.8rem; }
+</style>
+</head>
+<body>
+  <h1>UMAD · P4 Kefka Says</h1>
+  <div class="sub">Macro pad &amp; chat log — click a macro to call it out</div>
+
+  <!-- Cross-tool nav. Add a link here when a new mechanic tool ships. -->
+  <nav class="toolnav">
+    <a href="index.html">P1 Arrows</a>
+    <a href="limitcut.html">P3 Limit Cut</a>
+    <a href="kefkasays.html" class="active">P4 Kefka Says</a>
+  </nav>
+
+  <div class="stage">
+    <div id="pad"></div>
+
+    <div id="palette">
+      <div class="palette-head">
+        <h3>Macro palette · drag onto the pad</h3>
+        <div class="palette-actions">
+          <button id="editBtn" class="ghost">Edit macros</button>
+          <button id="ioBtn" class="ghost">Import / Export</button>
+          <button id="paletteToggle" class="ghost">Hide</button>
+        </div>
+      </div>
+      <div id="paletteChips"></div>
+    </div>
+
+    <div class="colorbar">
+      <span class="colorpick">Party <input type="color" id="partyColor"></span>
+      <span class="colorpick">Echo <input type="color" id="echoColor"></span>
+      <button id="clearBtn" class="ghost">Clear log</button>
+      <button id="aboutBtn" class="ghost">About</button>
+    </div>
+
+    <div id="log"><div class="empty-hint">Click a macro above to post its call-out here.</div></div>
+
+    <div id="about" hidden>
+      <h3>About</h3>
+      <div>Assign your call-out macros to the pad, then click them during the pull to post
+      party (<span style="color:var(--party)">/p</span>) and echo
+      (<span style="color:var(--echo)">/e</span>) lines into the log. Everything is local;
+      use <b>Import / Export</b> to share your setup. Handy to run alongside VOD review or
+      a sim while drilling.</div>
+      <h3 style="margin-top:12px">Resources</h3>
+      <div>
+        <a href="https://raidplan.io/plan/V-r1InYZW7VMRYAU" target="_blank" rel="noopener">Raidplan&nbsp;&#8599;</a> &middot;
+        <a href="https://docs.google.com/spreadsheets/d/1Uo88anmlf2zectmvWMnm8j4ebMPOsFyQ-Lq33wFu7Y0/edit?usp=sharing" target="_blank" rel="noopener">Aery's P4 Macros&nbsp;&#8599;</a> &middot;
+        <a href="https://github.com/WCGH/Waju-Sims/releases" target="_blank" rel="noopener">DMU Sim&nbsp;&#8599;</a>
+      </div>
+      <div class="credit">Created by <b>Daspien</b> &middot; with the assistance of Claude</div>
+    </div>
+  </div>
+
+  <!-- Editor modal -->
+  <div class="modal" id="editModal">
+    <div class="sheet">
+      <h2>Edit macros</h2>
+      <div class="editor-grid">
+        <div>
+          <div class="macrolist" id="macroList"></div>
+          <div class="rowbtns">
+            <button id="newMacroBtn">+ New</button>
+            <button id="dupMacroBtn" class="ghost">Duplicate</button>
+            <button id="delMacroBtn" class="ghost">Delete</button>
+          </div>
+        </div>
+        <div>
+          <label for="macroName">Name (shown on the pad / hover)</label>
+          <input type="text" id="macroName" autocomplete="off">
+          <label for="macroBody">Macro text (paste from in-game; /p, /e, bare lines; /micon is ignored)</label>
+          <textarea id="macroBody" spellcheck="false"></textarea>
+          <div class="rowbtns">
+            <button id="saveMacroBtn">Save</button>
+            <button id="closeEditBtn" class="ghost">Close</button>
+            <button id="resetBtn" class="ghost">Reset to defaults</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import/Export modal -->
+  <div class="modal" id="ioModal">
+    <div class="sheet">
+      <h2>Import / Export setup</h2>
+      <label for="ioText">Setup string (macros + pad layout + colors)</label>
+      <textarea id="ioText" spellcheck="false" placeholder="Paste a setup string here to import, or press Export to fill this box."></textarea>
+      <div class="err" id="ioErr"></div>
+      <div class="rowbtns">
+        <button id="exportBtn">Export &rarr; fill box</button>
+        <button id="copyBtn" class="ghost">Copy</button>
+        <button id="importBtn">Import from box</button>
+        <button id="closeIoBtn" class="ghost">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="kefkasays-engine.js"></script>
+  <script>
+  (function () {
+    "use strict";
+
+    var KS = window.KefkaSays;
+    var STORE_KEY = "kefkasays.v1";
+    var GRID_SIZE = 25;
+
+    // ---- state ----
+    var state = loadState();
+
+    function defaultState() {
+      var macros = {};
+      KS.DEFAULT_MACROS.forEach(function (m) { macros[m.id] = cloneMacro(m); });
+      return {
+        v: 1,
+        macros: macros,
+        grid: KS.DEFAULT_GRID.slice(0, GRID_SIZE),
+        colors: { party: KS.DEFAULT_COLORS.party, echo: KS.DEFAULT_COLORS.echo }
+      };
+    }
+
+    function cloneMacro(m) {
+      return { id: m.id, name: m.name, lines: m.lines.map(function (l) {
+        return { channel: l.channel, text: l.text }; }) };
+    }
+
+    function loadState() {
+      try {
+        var raw = localStorage.getItem(STORE_KEY);
+        if (!raw) return defaultState();
+        var s = JSON.parse(raw);
+        if (!s || s.v !== 1 || typeof s.macros !== "object" || !Array.isArray(s.grid)) return defaultState();
+        // normalize grid length
+        s.grid = s.grid.slice(0, GRID_SIZE);
+        while (s.grid.length < GRID_SIZE) s.grid.push(null);
+        if (!s.colors) s.colors = { party: KS.DEFAULT_COLORS.party, echo: KS.DEFAULT_COLORS.echo };
+        return s;
+      } catch (e) { return defaultState(); }
+    }
+
+    function save() {
+      try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {}
+    }
+
+    // ---- DOM refs ----
+    var padEl = document.getElementById("pad");
+    var logEl = document.getElementById("log");
+
+    // ---- cosmetic fake clock for timestamps ----
+    var fakeMin = 16 * 60 + 8; // start 16:08, like the reference
+    function nextStamp() {
+      var h = Math.floor(fakeMin / 60) % 24, m = fakeMin % 60;
+      fakeMin += 1;
+      return "[" + (h < 10 ? "0" + h : h) + ":" + (m < 10 ? "0" + m : m) + "]";
+    }
+
+    // ---- pad render ----
+    function renderPad() {
+      padEl.innerHTML = "";
+      for (var i = 0; i < GRID_SIZE; i++) {
+        var id = state.grid[i];
+        var macro = id ? state.macros[id] : null;
+        var el = document.createElement("div");
+        el.className = "slot" + (macro ? "" : " empty");
+        el.dataset.index = i;
+        if (macro) {
+          el.textContent = macro.name;
+          el.title = macro.name;
+          el.draggable = true;
+          (function (m) {
+            el.addEventListener("click", function () { fireMacro(m); });
+          })(macro);
+        }
+        padEl.appendChild(el);
+      }
+    }
+
+    // ---- fire a macro into the log ----
+    function fireMacro(macro) {
+      var hint = logEl.querySelector(".empty-hint");
+      if (hint) hint.remove();
+      var stamp = nextStamp();
+      macro.lines.forEach(function (ln) {
+        var row = document.createElement("div");
+        row.className = "logline " + ln.channel;
+        row.innerHTML = '<span class="ts"></span><span class="msg"></span>';
+        row.querySelector(".ts").textContent = stamp;
+        row.querySelector(".msg").textContent = ln.text;
+        logEl.appendChild(row);
+      });
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    // ---- colors -> CSS vars ----
+    function applyColors() {
+      document.documentElement.style.setProperty("--party", state.colors.party);
+      document.documentElement.style.setProperty("--echo", state.colors.echo);
+    }
+
+    // ---- init ----
+    applyColors();
+    renderPad();
+
+    // expose for later tasks within this IIFE scope
+    window.__KS_APP = {
+      state: state, save: save, renderPad: renderPad, applyColors: applyColors,
+      cloneMacro: cloneMacro, defaultState: defaultState
+    };
+  })();
+  </script>
+
+  <script>
+  (function () {
+    "use strict";
+    var app = window.__KS_APP;
+    var partyInput = document.getElementById("partyColor");
+    var echoInput = document.getElementById("echoColor");
+
+    // seed pickers from state
+    partyInput.value = app.state.colors.party;
+    echoInput.value = app.state.colors.echo;
+
+    partyInput.addEventListener("input", function () {
+      app.state.colors.party = partyInput.value;
+      app.applyColors(); app.save();
+    });
+    echoInput.addEventListener("input", function () {
+      app.state.colors.echo = echoInput.value;
+      app.applyColors(); app.save();
+    });
+  })();
+  </script>
+
+  <script>
+  (function () {
+    "use strict";
+    var app = window.__KS_APP;
+    var padEl = document.getElementById("pad");
+    var paletteEl = document.getElementById("palette");
+    var chipsEl = document.getElementById("paletteChips");
+
+    // drag payload: {source:"palette"|"grid", id?, index?}
+    var drag = null;
+
+    function renderPalette() {
+      chipsEl.innerHTML = "";
+      Object.keys(app.state.macros).map(function (id) { return app.state.macros[id]; })
+        .sort(function (a, b) { return a.name.localeCompare(b.name); })
+        .forEach(function (m) {
+          var chip = document.createElement("div");
+          chip.className = "chip";
+          chip.textContent = m.name;
+          chip.title = m.name;
+          chip.draggable = true;
+          chip.addEventListener("dragstart", function (e) {
+            drag = { source: "palette", id: m.id };
+            e.dataTransfer.setData("text/plain", m.id);
+            e.dataTransfer.effectAllowed = "copy";
+          });
+          chip.addEventListener("dragend", function () { drag = null; }); // clear on cancelled drag
+          chipsEl.appendChild(chip);
+        });
+    }
+
+    // Patch renderPad so each fresh render re-binds slot DnD handlers.
+    var baseRenderPad = app.renderPad;
+    function renderPadWithDnD() {
+      baseRenderPad();
+      Array.prototype.forEach.call(padEl.children, function (slot) {
+        var idx = parseInt(slot.dataset.index, 10);
+
+        if (!slot.classList.contains("empty")) {
+          slot.addEventListener("dragstart", function (e) {
+            drag = { source: "grid", index: idx };
+            e.dataTransfer.setData("text/plain", String(idx));
+            e.dataTransfer.effectAllowed = "move";
+          });
+          slot.addEventListener("dragend", function () { drag = null; }); // clear on cancelled drag
+          slot.addEventListener("contextmenu", function (e) {
+            e.preventDefault();
+            app.state.grid[idx] = null; app.save(); renderPadWithDnD();
+          });
+        }
+
+        slot.addEventListener("dragover", function (e) { e.preventDefault(); slot.classList.add("dragover"); });
+        slot.addEventListener("dragleave", function () { slot.classList.remove("dragover"); });
+        slot.addEventListener("drop", function (e) {
+          e.preventDefault(); slot.classList.remove("dragover");
+          if (!drag) return;
+          if (drag.source === "palette") {
+            app.state.grid[idx] = drag.id;
+          } else if (drag.source === "grid" && drag.index !== idx) {
+            var tmp = app.state.grid[idx];
+            app.state.grid[idx] = app.state.grid[drag.index];
+            app.state.grid[drag.index] = tmp; // swap (tmp may be null = move)
+          }
+          drag = null; app.save(); renderPadWithDnD();
+        });
+      });
+    }
+
+    // Dropping a grid slot onto the palette clears it.
+    paletteEl.addEventListener("dragover", function (e) {
+      if (drag && drag.source === "grid") { e.preventDefault(); paletteEl.classList.add("dragover"); }
+    });
+    paletteEl.addEventListener("dragleave", function () { paletteEl.classList.remove("dragover"); });
+    paletteEl.addEventListener("drop", function (e) {
+      paletteEl.classList.remove("dragover");
+      if (drag && drag.source === "grid") {
+        e.preventDefault();
+        app.state.grid[drag.index] = null; drag = null; app.save(); renderPadWithDnD();
+      }
+    });
+
+    // expose upgraded render to the app handle + other tasks
+    app.renderPad = renderPadWithDnD;
+    app.renderPalette = renderPalette;
+
+    renderPalette();
+    renderPadWithDnD();
+  })();
+  </script>
+
+  <script>
+  (function () {
+    "use strict";
+    var logEl = document.getElementById("log");
+    document.getElementById("clearBtn").addEventListener("click", function () {
+      logEl.innerHTML = '<div class="empty-hint">Click a macro above to post its call-out here.</div>';
+    });
+    var aboutEl = document.getElementById("about");
+    document.getElementById("aboutBtn").addEventListener("click", function () {
+      aboutEl.hidden = !aboutEl.hidden;
+    });
+
+    // collapse/expand the macro palette
+    var paletteEl = document.getElementById("palette");
+    var paletteToggle = document.getElementById("paletteToggle");
+    paletteToggle.addEventListener("click", function () {
+      var collapsed = paletteEl.classList.toggle("collapsed");
+      paletteToggle.textContent = collapsed ? "Show" : "Hide";
+    });
+  })();
+  </script>
+  <script>
+  (function () {
+    "use strict";
+    var KS = window.KefkaSays;
+    var app = window.__KS_APP;
+
+    var modal = document.getElementById("editModal");
+    var listEl = document.getElementById("macroList");
+    var nameEl = document.getElementById("macroName");
+    var bodyEl = document.getElementById("macroBody");
+    var selectedId = null;
+
+    function uid() {
+      // browser-safe unique id (Date/Math allowed here, this is page code)
+      return "m-" + Date.now().toString(36) + "-" + Math.floor(Math.random() * 1e6).toString(36);
+    }
+
+    function macrosArray() {
+      return Object.keys(app.state.macros).map(function (id) { return app.state.macros[id]; })
+        .sort(function (a, b) { return a.name.localeCompare(b.name); });
+    }
+
+    function renderList() {
+      listEl.innerHTML = "";
+      macrosArray().forEach(function (m) {
+        var item = document.createElement("div");
+        item.className = "item" + (m.id === selectedId ? " active" : "");
+        item.textContent = m.name;
+        item.addEventListener("click", function () { selectMacro(m.id); });
+        listEl.appendChild(item);
+      });
+    }
+
+    function selectMacro(id) {
+      selectedId = id;
+      var m = app.state.macros[id];
+      nameEl.value = m ? m.name : "";
+      bodyEl.value = m ? KS.serializeMacro(m) : "";
+      renderList();
+    }
+
+    function openEditor() {
+      if (!selectedId || !app.state.macros[selectedId]) {
+        var first = macrosArray()[0];
+        selectedId = first ? first.id : null;
+      }
+      renderList();
+      if (selectedId) selectMacro(selectedId); else { nameEl.value = ""; bodyEl.value = ""; }
+      modal.classList.add("open");
+    }
+    function closeEditor() { modal.classList.remove("open"); }
+
+    function saveCurrent() {
+      if (!selectedId) return;
+      var parsed = KS.parseMacro(bodyEl.value);
+      app.state.macros[selectedId] = {
+        id: selectedId,
+        name: (nameEl.value || "Unnamed").trim(),
+        lines: parsed.lines
+      };
+      app.save();
+      app.renderPalette(); app.renderPad();
+      renderList();
+    }
+
+    function newMacro() {
+      var id = uid();
+      app.state.macros[id] = { id: id, name: "New Macro", lines: [] };
+      app.save(); app.renderPalette();
+      selectMacro(id);
+    }
+
+    function duplicateMacro() {
+      if (!selectedId) return;
+      var src = app.state.macros[selectedId];
+      var id = uid();
+      app.state.macros[id] = { id: id, name: src.name + " copy",
+        lines: src.lines.map(function (l) { return { channel: l.channel, text: l.text }; }) };
+      app.save(); app.renderPalette();
+      selectMacro(id);
+    }
+
+    function deleteMacro() {
+      if (!selectedId) return;
+      delete app.state.macros[selectedId];
+      // clear any grid slots referencing it
+      for (var i = 0; i < app.state.grid.length; i++) {
+        if (app.state.grid[i] === selectedId) app.state.grid[i] = null;
+      }
+      selectedId = null;
+      app.save(); app.renderPalette(); app.renderPad();
+      openEditor();
+    }
+
+    function resetDefaults() {
+      if (!window.confirm("Reset all macros, pad layout, and colors to defaults? This cannot be undone.")) return;
+      var fresh = app.defaultState();
+      app.state.macros = fresh.macros;
+      app.state.grid = fresh.grid;
+      app.state.colors = fresh.colors;
+      app.save(); app.applyColors(); app.renderPalette(); app.renderPad();
+      document.getElementById("partyColor").value = app.state.colors.party;
+      document.getElementById("echoColor").value = app.state.colors.echo;
+      selectedId = null; openEditor();
+    }
+
+    document.getElementById("editBtn").addEventListener("click", openEditor);
+    document.getElementById("closeEditBtn").addEventListener("click", closeEditor);
+    document.getElementById("saveMacroBtn").addEventListener("click", saveCurrent);
+    document.getElementById("newMacroBtn").addEventListener("click", newMacro);
+    document.getElementById("dupMacroBtn").addEventListener("click", duplicateMacro);
+    document.getElementById("delMacroBtn").addEventListener("click", deleteMacro);
+    document.getElementById("resetBtn").addEventListener("click", resetDefaults);
+    modal.addEventListener("click", function (e) { if (e.target === modal) closeEditor(); });
+  })();
+  </script>
+
+  <script>
+  (function () {
+    "use strict";
+    var KS = window.KefkaSays;
+    var app = window.__KS_APP;
+
+    var modal = document.getElementById("ioModal");
+    var textEl = document.getElementById("ioText");
+    var errEl = document.getElementById("ioErr");
+
+    // reset both text and the sticky inline color so .err's red is the default
+    function open() { errEl.textContent = ""; errEl.style.color = ""; modal.classList.add("open"); }
+    function close() { modal.classList.remove("open"); }
+
+    function ok(msg) { errEl.style.color = "var(--green)"; errEl.textContent = msg; }
+    function fail(msg) { errEl.style.color = "var(--red)"; errEl.textContent = msg; }
+
+    document.getElementById("ioBtn").addEventListener("click", open);
+    document.getElementById("closeIoBtn").addEventListener("click", close);
+    modal.addEventListener("click", function (e) { if (e.target === modal) close(); });
+
+    document.getElementById("exportBtn").addEventListener("click", function () {
+      errEl.textContent = "";
+      textEl.value = KS.encodeSetup(app.state);
+      textEl.focus(); textEl.select();
+    });
+
+    document.getElementById("copyBtn").addEventListener("click", function () {
+      if (!textEl.value) { fail("Nothing to copy — press Export first."); return; }
+      textEl.focus(); textEl.select();
+      // navigator.clipboard.writeText rejects asynchronously (e.g. on file:// or
+      // denied permission), so route the promise's catch to the manual-copy hint
+      // rather than falsely reporting success from a sync try/catch.
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(textEl.value)
+          .then(function () { ok("Copied."); })
+          .catch(function () { fail("Copy failed — the text is selected; press Ctrl+C."); });
+        return;
+      }
+      try {
+        if (document.execCommand("copy")) ok("Copied.");
+        else fail("Copy failed — the text is selected; press Ctrl+C.");
+      } catch (e) { fail("Copy failed — the text is selected; press Ctrl+C."); }
+    });
+
+    document.getElementById("importBtn").addEventListener("click", function () {
+      var s;
+      try { s = KS.decodeSetup(textEl.value); }
+      catch (e) { fail("Could not import: " + e.message); return; }
+      // adopt the imported setup (decodeSetup has deep-validated every field)
+      app.state.v = 1;
+      app.state.macros = s.macros;
+      app.state.grid = s.grid.slice(0, 25);
+      while (app.state.grid.length < 25) app.state.grid.push(null);
+      app.state.colors = s.colors;
+      app.save(); app.applyColors(); app.renderPalette(); app.renderPad();
+      document.getElementById("partyColor").value = app.state.colors.party;
+      document.getElementById("echoColor").value = app.state.colors.echo;
+      ok("Imported.");
+    });
+  })();
+  </script>
+</body>
+</html>
