@@ -56,7 +56,7 @@ pull to post their lines into a simulated chat log in the right channel colors.
 - **Two channels:** Party (`/p`) and Echo (`/e`), each with its own customizable color;
   bare (no-command) lines post as plain text. `/micon` lines are ignored on import.
 - **Customizable macros:** the **Edit macros** window lets you add/duplicate/delete macros
-  and edit their text exactly like an in-game macro (paste straight in). Ships with 18
+  and edit their text exactly like an in-game macro (paste straight in). Ships with 22
   default UMAD P4 call-outs and a default pad layout.
 - **Drag to assign:** drag macros from the palette onto the pad; drag a slot onto the
   palette (or right-click it) to clear it. **Clear log** wipes the log between attempts.

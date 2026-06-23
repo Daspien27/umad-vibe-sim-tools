@@ -27,7 +27,7 @@ tools, plus a pure, tested `kefkasays-engine.js`.
 - **Clear log** for subsequent attempts.
 - **Import / Export** the full setup (macros + grid + colors) as a single shareable
   string.
-- Ships with the **18 default macros** listed by the user.
+- Ships with the **22 default macros** (the original 18 plus the stocked-element call-outs).
 
 ## Non-Goals (this pass)
 
@@ -71,7 +71,7 @@ UMAD · P4 Kefka Says
   right-click (clear the slot).
 
 ### Macro palette (drawer)
-- A collapsible, scrollable strip listing **all** defined macros (18 defaults + any the
+- A collapsible, scrollable strip listing **all** defined macros (22 defaults + any the
   user adds). This is the source for drag-to-assign.
 
 ### Chat log
@@ -107,7 +107,7 @@ Setup = {
 
 - **Persistence:** the whole `Setup` is saved to `localStorage` under `kefkasays.v1`
   on every change; loaded on startup; falls back to defaults if absent/corrupt.
-- **Defaults:** the 18 macros below, a **default pad layout** (`DEFAULT_GRID`, baked into
+- **Defaults:** the 22 macros below, a **default pad layout** (`DEFAULT_GRID`, baked into
   the engine from the maintainer's exported setup string), Party ≈ light cyan/white,
   Echo ≈ pink/magenta (per the reference image).
 
@@ -115,7 +115,7 @@ Setup = {
 
 Exports (CommonJS, like the other engines so `node --test` works):
 
-- `DEFAULT_MACROS` — the 18 macros as structured `Macro` data.
+- `DEFAULT_MACROS` — the 22 macros as structured `Macro` data.
 - `DEFAULT_COLORS` — `{ party, echo }`.
 - `parseMacro(text) -> { name?, lines }`
   - Splits raw macro text into lines. Per-line prefix mapping:
@@ -146,7 +146,7 @@ Exports (CommonJS, like the other engines so `node --test` works):
   - A **raw textarea** containing the FF-style macro text (`/p …`, `/e …` lines), so a
     user can paste straight from their in-game macro. On **Save**, the textarea is run
     through `parseMacro` to produce the structured lines.
-- **Reset to defaults** restores the shipped 18 macros + default colors (with a confirm).
+- **Reset to defaults** restores the shipped 22 macros + default colors (with a confirm).
 
 ## Import / Export (modal)
 
@@ -156,7 +156,7 @@ Exports (CommonJS, like the other engines so `node --test` works):
   shape → replace state, persist, re-render. On bad input, show a clear inline error and
   change nothing.
 
-## Default Macros (the 18)
+## Default Macros (the 22)
 
 `/micon` lines are dropped on import. Channel shown per line.
 
@@ -164,8 +164,8 @@ Exports (CommonJS, like the other engines so `node --test` works):
 |---|------|------------------------|
 | 1 | Real Inferno | party · `[1] Chariot - GET OUT!! (Inferno)` / party · `[1] AFTER: First Shriek + Levin Floor` |
 | 2 | Fake Inferno | party · `[1] DONUT - STAY IN!! (Inferno)` / party · `[1] AFTER: First Shriek + Levin Floor` |
-| 3 | Real Typhoon | party · `[2] DONUT - STAY IN!! (Typhoon)` / party · `[2] AFTER: Second Shriek - During Stock Floor` |
-| 4 | Fake Typhoon | party · `[2] Chariot - GET OUT!! (Typhoon)` / party · `[2] AFTER: Second Shriek - During Stock Floor` |
+| 3 | Real Tsunami | party · `[2] DONUT - STAY IN!! (Tsunami)` / party · `[2] AFTER: Second Shriek - During Stock Floor` |
+| 4 | Fake Tsunami | party · `[2] Chariot - GET OUT!! (Tsunami)` / party · `[2] AFTER: Second Shriek - During Stock Floor` |
 | 5 | Yellow Dude | echo · `-` / echo · `Opposite (Real) // Same (Fake)` |
 | 6 | Purple Dude | echo · `-` / echo · `Same (Real) // Opposite (Fake)` |
 | 7 | Real Exdeath | echo · `-` / echo · `....V----- REAL (LOOK AWAY)` |
@@ -180,6 +180,10 @@ Exports (CommonJS, like the other engines so `node --test` works):
 | 16 | DPS Prpl >1min | echo · `[C] -> [B] ------------- [C] -> [C]` |
 | 17 | DPS Water <1min | echo · `[C] -> [C] ------------- [B] -> [C]` |
 | 18 | DPS Water >1min | echo · `[C] -> [C] ------------- [C] -> [B]` |
+| 19 | Real Lighting | party · `Real Lighting Stocked` |
+| 20 | Fake Lighting | party · `Fake Lighting Stocked` |
+| 21 | Real Ice | party · `Real Ice Stocked` |
+| 22 | Fake Ice | party · `Fake Ice Stocked` |
 
 > Note: "I'm Shriek" is the macro **name** only (shown on the pad / on hover); it is not a
 > chat line. The `none` channel still exists for any user-authored bare (no-command) line —

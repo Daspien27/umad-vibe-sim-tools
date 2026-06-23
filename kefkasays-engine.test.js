@@ -8,10 +8,10 @@ test("DEFAULT_COLORS has party + echo hex strings", () => {
   assert.match(KS.DEFAULT_COLORS.echo, /^#[0-9a-fA-F]{6}$/);
 });
 
-test("DEFAULT_MACROS: 18 macros, unique ids, valid shape", () => {
-  assert.strictEqual(KS.DEFAULT_MACROS.length, 18);
+test("DEFAULT_MACROS: 22 macros, unique ids, valid shape", () => {
+  assert.strictEqual(KS.DEFAULT_MACROS.length, 22);
   const ids = KS.DEFAULT_MACROS.map(m => m.id);
-  assert.strictEqual(new Set(ids).size, 18, "ids are unique");
+  assert.strictEqual(new Set(ids).size, 22, "ids are unique");
   for (const m of KS.DEFAULT_MACROS) {
     assert.ok(typeof m.id === "string" && m.id.length > 0, "id is non-empty string");
     assert.ok(typeof m.name === "string" && m.name.length > 0, "name is non-empty string");
@@ -47,6 +47,16 @@ test("DEFAULT_MACROS: spot-check known macros", () => {
   assert.deepStrictEqual(byName["I'm Shriek"].lines, [
     { channel: "echo", text: "SHRiEEEEEEEKKK!!!!" },
   ]);
+
+  // Typhoon was renamed to Tsunami (name + line text)
+  assert.deepStrictEqual(byName["Real Tsunami"].lines, [
+    { channel: "party", text: "[2] DONUT - STAY IN!! (Tsunami)" },
+    { channel: "party", text: "[2] AFTER: Second Shriek - During Stock Floor" },
+  ]);
+
+  // Stocked-element call-outs
+  assert.deepStrictEqual(byName["Real Lighting"].lines, [{ channel: "party", text: "Real Lighting Stocked" }]);
+  assert.deepStrictEqual(byName["Fake Ice"].lines, [{ channel: "party", text: "Fake Ice Stocked" }]);
 });
 
 test("parseMacro: /p and /party -> party channel, prefix stripped", () => {

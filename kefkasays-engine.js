@@ -25,11 +25,11 @@
     { id: "fake-inferno", name: "Fake Inferno", lines: [
       P("[1] DONUT - STAY IN!! (Inferno)"),
       P("[1] AFTER: First Shriek + Levin Floor") ] },
-    { id: "real-typhoon", name: "Real Typhoon", lines: [
-      P("[2] DONUT - STAY IN!! (Typhoon)"),
+    { id: "real-typhoon", name: "Real Tsunami", lines: [
+      P("[2] DONUT - STAY IN!! (Tsunami)"),
       P("[2] AFTER: Second Shriek - During Stock Floor") ] },
-    { id: "fake-typhoon", name: "Fake Typhoon", lines: [
-      P("[2] Chariot - GET OUT!! (Typhoon)"),
+    { id: "fake-typhoon", name: "Fake Tsunami", lines: [
+      P("[2] Chariot - GET OUT!! (Tsunami)"),
       P("[2] AFTER: Second Shriek - During Stock Floor") ] },
     { id: "yellow-dude", name: "Yellow Dude", lines: [
       E("-"),
@@ -62,16 +62,24 @@
     { id: "dps-water-lt", name: "DPS Water <1min", lines: [
       E("[C] -> [C] ------------- [B] -> [C]") ] },
     { id: "dps-water-gt", name: "DPS Water >1min", lines: [
-      E("[C] -> [C] ------------- [C] -> [B]") ] }
+      E("[C] -> [C] ------------- [C] -> [B]") ] },
+    { id: "real-lighting", name: "Real Lighting", lines: [
+      P("Real Lighting Stocked") ] },
+    { id: "fake-lighting", name: "Fake Lighting", lines: [
+      P("Fake Lighting Stocked") ] },
+    { id: "real-ice", name: "Real Ice", lines: [
+      P("Real Ice Stocked") ] },
+    { id: "fake-ice", name: "Fake Ice", lines: [
+      P("Fake Ice Stocked") ] }
   ];
 
   // Default pad layout (5x5, row-major). null = empty slot; ids reference DEFAULT_MACROS.
   var DEFAULT_GRID = [
-    "real-inferno", "fake-inferno", null, "real-exdeath", "fake-exdeath",
-    "real-typhoon", "fake-typhoon", null, null,           null,
-    null,           null,           null, null,           null,
-    "accel-bomb",   "im-shriek",    null, "dps-prpl-lt",  "dps-prpl-gt",
-    null,           null,           null, "dps-water-lt", "dps-water-gt"
+    "real-inferno", "fake-inferno", null, "real-exdeath",  "fake-exdeath",
+    "real-typhoon", "fake-typhoon", null, "dps-prpl-lt",   "dps-prpl-gt",
+    null,           null,           null, "dps-water-lt",  "dps-water-gt",
+    "accel-bomb",   "im-shriek",    null, "real-lighting", "fake-lighting",
+    null,           null,           null, "real-ice",      "fake-ice"
   ];
 
   // Parse raw FF-style macro text into structured lines.
